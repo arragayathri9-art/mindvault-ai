@@ -28,9 +28,17 @@ HR_DOCS_DIR = os.path.join(BASE_DIR, "hr_docs")
 
 app = FastAPI(title="MindVault AI API")
 
+allowed_origins = ["http://localhost:5173", "http://127.0.0.1:5173"]
+env_origins = os.environ.get("ALLOWED_ORIGINS")
+if env_origins:
+    allowed_origins.extend([o.strip() for o in env_origins.split(",") if o.strip()])
+else:
+    allowed_origins.append("*")
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"],
+    allow_origins=allowed_origins if "*" not in allowed_origins else [],
+    allow_origin_regex=".*" if "*" in allowed_origins else None,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
