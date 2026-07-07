@@ -20,6 +20,7 @@ from reasoning import Reasoner
 from experts import scan_experts, get_experts_for_sources
 from utils.risk_analyzer import get_document_similarity, generate_risk_summary
 from utils.knowledge_gap import log_knowledge_gap
+from utils.encoding_helper import sanitize_to_ascii
 from ingest import chunk_text
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -404,6 +405,9 @@ def generate_ppt(request: PPTRequest):
             "Limit presentation to 4-7 slides total. Keep slide content structured, highly professional, and informative."
         )
         user_prompt = f"Topic: {request.topic}"
+        
+        system_prompt = sanitize_to_ascii(system_prompt)
+        user_prompt = sanitize_to_ascii(user_prompt)
         
         try:
             response = client.chat.completions.create(

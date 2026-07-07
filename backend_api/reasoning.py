@@ -1,5 +1,8 @@
 import json
+import traceback
+import sys
 from groq import Groq
+from utils.encoding_helper import sanitize_to_ascii
 
 class Reasoner:
     def __init__(self, api_key, model_name="llama-3.3-70b-versatile"):
@@ -48,6 +51,9 @@ Context Chunks:
 Please generate the JSON response.
 """
 
+        system_prompt = sanitize_to_ascii(system_prompt)
+        user_prompt = sanitize_to_ascii(user_prompt)
+
         try:
             client = Groq(api_key=self.api_key)
             response = client.chat.completions.create(
@@ -79,8 +85,9 @@ Please generate the JSON response.
             }
             
         except Exception as e:
+            traceback.print_exc(file=sys.stderr)
             return {
                 "answer": f"Error running reasoning model: {str(e)}",
                 "confidence_score": 0,
-                "reasoning": "Reasoning failed due to an exception."
+                "reasoning": f"Reasoning failed due to an exception: {traceback.format_exc()}"
             }

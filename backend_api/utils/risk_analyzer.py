@@ -1,6 +1,7 @@
 import os
 import numpy as np
 from groq import Groq
+from utils.encoding_helper import sanitize_to_ascii
 
 
 def get_document_similarity(situation, hr_docs_dir, model):
@@ -72,6 +73,9 @@ Most similar past document ({matched_filename}):
 
 Provide your risk analysis and recommendations.
 """
+    system_prompt = sanitize_to_ascii(system_prompt)
+    user_prompt = sanitize_to_ascii(user_prompt)
+
     try:
         response = client.chat.completions.create(
             messages=[
