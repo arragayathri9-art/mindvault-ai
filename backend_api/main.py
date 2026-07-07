@@ -9,7 +9,7 @@ Run with:
 """
 import os
 import pickle
-from fastapi import FastAPI, HTTPException, UploadFile, File
+from fastapi import FastAPI, HTTPException, UploadFile, File, Response
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from groq import Groq
@@ -511,8 +511,8 @@ def generate_ppt(request: PPTRequest):
     prs.save(ppt_io)
     ppt_io.seek(0)
 
-    return StreamingResponse(
-        ppt_io,
+    return Response(
+        content=ppt_io.getvalue(),
         media_type="application/vnd.openxmlformats-officedocument.presentationml.presentation",
         headers={"Content-Disposition": "attachment; filename=mindvault_presentation.pptx"}
     )
