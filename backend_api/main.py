@@ -102,7 +102,8 @@ class PPTRequest(BaseModel):
 
 
 def _resolve_api_key(request_key):
-    return request_key or os.environ.get("GROQ_API_KEY", "")
+    key = request_key or os.environ.get("GROQ_API_KEY", "")
+    return sanitize_to_ascii(key)
 
 
 @app.get("/api/health")
