@@ -110,7 +110,7 @@ export default function AskTab({ apiKey }) {
           experts: result.experts
         }
       });
-      const url = window.URL.createObjectURL(new Blob([blob]));
+      const url = window.URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
       link.setAttribute("download", `mindvault_answer_${new Date().toISOString().slice(0, 10)}.pptx`);
@@ -119,7 +119,17 @@ export default function AskTab({ apiKey }) {
       link.parentNode.removeChild(link);
     } catch (err) {
       console.error(err);
-      alert("Failed to generate answer card slide.");
+      if (err.response?.data instanceof Blob) {
+        try {
+          const text = await err.response.data.text();
+          const parsed = JSON.parse(text);
+          alert("Failed to generate answer card slide: " + (parsed.detail || ""));
+        } catch (e) {
+          alert("Failed to generate answer card slide.");
+        }
+      } else {
+        alert("Failed to generate answer card slide: " + (err.response?.data?.detail || ""));
+      }
     } finally {
       setGeneratingPPT(false);
     }

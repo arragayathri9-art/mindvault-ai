@@ -20,7 +20,7 @@ export default function PresentationTab({ apiKey }) {
       const blob = await generatePPT(payload);
       
       // Create a link and trigger download
-      const url = window.URL.createObjectURL(new Blob([blob]));
+      const url = window.URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
       
@@ -35,9 +35,19 @@ export default function PresentationTab({ apiKey }) {
       link.parentNode.removeChild(link);
     } catch (err) {
       console.error(err);
-      setError(
-        err.response?.data?.detail || "An error occurred while generating the presentation."
-      );
+      if (err.response?.data instanceof Blob) {
+        try {
+          const text = await err.response.data.text();
+          const parsed = JSON.parse(text);
+          setError(parsed.detail || "An error occurred while generating the presentation.");
+        } catch (e) {
+          setError("An error occurred while generating the presentation.");
+        }
+      } else {
+        setError(
+          err.response?.data?.detail || "An error occurred while generating the presentation."
+        );
+      }
     } finally {
       setLoadingMode(null);
     }
