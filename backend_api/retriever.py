@@ -1,7 +1,7 @@
 import os
 import pickle
 import numpy as np
-from sentence_transformers import SentenceTransformer
+from utils.encoder import HashedTfidfEncoder
 
 class Retriever:
     def __init__(self, data_dir=None, model_name='all-MiniLM-L6-v2'):
@@ -12,7 +12,7 @@ class Retriever:
         self.embeddings_path = os.path.join(data_dir, "embeddings.npy")
         self.metadata_path = os.path.join(data_dir, "metadata.pkl")
         
-        self.model = SentenceTransformer(model_name)
+        self.model = HashedTfidfEncoder(dimension=384)
         self.embeddings = None
         self.metadata = None
         

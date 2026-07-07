@@ -1,6 +1,5 @@
 fastapi
 uvicorn
 groq
-sentence-transformers
 numpy
 python-pptx

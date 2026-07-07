@@ -1,7 +1,7 @@
 import os
 import pickle
 import numpy as np
-from sentence_transformers import SentenceTransformer
+from utils.encoder import HashedTfidfEncoder
 
 def chunk_text(text, max_chunk_size=1000):
     """
@@ -79,7 +79,7 @@ def run_ingestion(hr_docs_dir=None, output_dir=None, model_name='all-MiniLM-L6-v
     
     # Initialize sentence transformer
     print(f"Loading embedding model: {model_name}...")
-    model = SentenceTransformer(model_name)
+    model = HashedTfidfEncoder(dimension=384)
     
     print("Generating embeddings...")
     chunk_texts = [chunk["text"] for chunk in chunks_metadata]
