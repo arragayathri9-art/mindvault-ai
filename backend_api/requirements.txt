@@ -3,3 +3,4 @@ uvicorn
 groq
 numpy
 python-pptx
+python-multipart
