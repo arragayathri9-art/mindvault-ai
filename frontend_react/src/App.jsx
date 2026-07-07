@@ -87,6 +87,7 @@ export default function App() {
               placeholder="Groq API key (or leave blank for server key)"
               value={apiKey}
               onChange={(e) => setApiKey(e.target.value)}
+              autoComplete="new-password"
               style={inputStyle}
             />
           </div>
