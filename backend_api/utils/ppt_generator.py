@@ -5,16 +5,25 @@ from pptx.dml.color import RGBColor
 from pptx.enum.text import PP_ALIGN
 from pptx.enum.shapes import MSO_SHAPE
 
-# Theme Colors (Premium Dark Slate Theme)
-DARK_BG = RGBColor(13, 13, 27)        # #0d0d1b
-CARD_BG = RGBColor(30, 30, 56)        # #1e1e38
-WHITE_TEXT = RGBColor(243, 244, 246)  # #f3f4f6
-GRAY_TEXT = RGBColor(156, 163, 175)   # #9ca3af
-PURPLE_ACCENT = RGBColor(167, 139, 250) # #a78bfa
-INDIGO_ACCENT = RGBColor(99, 102, 241)  # #6366f1
-GOLD_ACCENT = RGBColor(250, 204, 21)    # #facc15
-RED_ACCENT = RGBColor(248, 113, 113)    # #f87171
-GREEN_ACCENT = RGBColor(74, 222, 128)   # #4ade80
+# Theme Colors (Premium Purple / Amber Theme)
+DARK_BG = RGBColor(21, 15, 38)         # #150F26 (deep purple-navy)
+CARD_BG = RGBColor(28, 22, 56)         # #1C1638 (raised purple)
+BORDER_COLOR = RGBColor(46, 38, 80)    # #2E2650 (hairline divider)
+WHITE_TEXT = RGBColor(245, 243, 250)   # #F5F3FA (primary text)
+GRAY_TEXT = RGBColor(139, 132, 173)    # #8B84AD (secondary text)
+PURPLE_ACCENT = RGBColor(75, 63, 158)  # #4B3F9E (violet)
+AMBER_HIGHLIGHT = RGBColor(240, 167, 66) # #F0A742 (amber)
+
+# Rotate color maps for KPI colors
+GOLD_ACCENT = AMBER_HIGHLIGHT
+INDIGO_ACCENT = PURPLE_ACCENT
+RED_ACCENT = RGBColor(239, 91, 91)     # #EF5B5B (coral red)
+GREEN_ACCENT = RGBColor(52, 211, 153)  # #34D399 (emerald)
+
+# Typography families
+FONT_HEADING = "Georgia"
+FONT_BODY = "Arial"
+FONT_MONO = "Courier New"
 
 def _set_slide_bg(slide):
     background = slide.background
@@ -28,7 +37,7 @@ def _add_accent_decorations(slide):
         MSO_SHAPE.RECTANGLE, Inches(0), Inches(0), Inches(10), Inches(0.08)
     )
     shape.fill.solid()
-    shape.fill.fore_color.rgb = INDIGO_ACCENT
+    shape.fill.fore_color.rgb = AMBER_HIGHLIGHT
     shape.line.fill.background()
 
 def _add_slide_header(slide, title_text):
@@ -42,7 +51,7 @@ def _add_slide_header(slide, title_text):
     
     p = tf.paragraphs[0]
     p.text = title_text
-    p.font.name = "Segoe UI"
+    p.font.name = FONT_HEADING
     p.font.size = Pt(28)
     p.font.bold = True
     p.font.color.rgb = WHITE_TEXT
@@ -68,16 +77,16 @@ def create_title_slide(prs, title, subtitle):
     p = tf.paragraphs[0]
     p.text = title
     p.alignment = PP_ALIGN.CENTER
-    p.font.name = "Segoe UI"
+    p.font.name = FONT_HEADING
     p.font.size = Pt(42)
     p.font.bold = True
-    p.font.color.rgb = PURPLE_ACCENT
+    p.font.color.rgb = AMBER_HIGHLIGHT
     
     if subtitle:
         p2 = tf.add_paragraph()
         p2.text = subtitle
         p2.alignment = PP_ALIGN.CENTER
-        p2.font.name = "Segoe UI"
+        p2.font.name = FONT_BODY
         p2.font.size = Pt(20)
         p2.font.color.rgb = GRAY_TEXT
         p2.space_before = Pt(20)
@@ -87,7 +96,7 @@ def create_title_slide(prs, title, subtitle):
         MSO_SHAPE.RECTANGLE, Inches(3.5), Inches(5.2), Inches(3.0), Inches(0.04)
     )
     shape.fill.solid()
-    shape.fill.fore_color.rgb = INDIGO_ACCENT
+    shape.fill.fore_color.rgb = PURPLE_ACCENT
     shape.line.fill.background()
 
 def create_content_slide(prs, title, bullets):
@@ -106,7 +115,7 @@ def create_content_slide(prs, title, bullets):
             p = tf.add_paragraph()
             
         p.text = "• " + bullet
-        p.font.name = "Segoe UI"
+        p.font.name = FONT_BODY
         p.font.size = Pt(18)
         p.font.color.rgb = WHITE_TEXT
         p.space_after = Pt(14)
@@ -122,14 +131,14 @@ def create_two_column_slide(prs, title, left_text, right_bullets):
     )
     card.fill.solid()
     card.fill.fore_color.rgb = CARD_BG
-    card.line.color.rgb = RGBColor(45, 45, 75)
+    card.line.color.rgb = BORDER_COLOR
     card.line.width = Pt(1)
     
     leftBox = slide.shapes.add_textbox(Inches(0.85), Inches(1.85), Inches(3.7), Inches(4.5))
     ltf = leftBox.text_frame
     ltf.word_wrap = True
     
-    # Handle potentially multi-line text or single paragraph
+    # Handle potentially multi-line text or paragraph
     lines = left_text.split('\n')
     for idx, line in enumerate(lines):
         if idx == 0:
@@ -137,7 +146,7 @@ def create_two_column_slide(prs, title, left_text, right_bullets):
         else:
             p = ltf.add_paragraph()
         p.text = line
-        p.font.name = "Segoe UI"
+        p.font.name = FONT_BODY
         p.font.size = Pt(15)
         p.font.color.rgb = WHITE_TEXT
         p.space_after = Pt(8)
@@ -153,7 +162,7 @@ def create_two_column_slide(prs, title, left_text, right_bullets):
         else:
             p = rtf.add_paragraph()
         p.text = "• " + bullet
-        p.font.name = "Segoe UI"
+        p.font.name = FONT_BODY
         p.font.size = Pt(15)
         p.font.color.rgb = WHITE_TEXT
         p.space_after = Pt(12)
@@ -189,7 +198,7 @@ def create_kpi_slide(prs, title, metrics):
         )
         card.fill.solid()
         card.fill.fore_color.rgb = CARD_BG
-        card.line.color.rgb = RGBColor(45, 45, 75)
+        card.line.color.rgb = BORDER_COLOR
         
         # Top color accent border
         color_name = metric.get("color", "indigo").lower()
@@ -207,11 +216,11 @@ def create_kpi_slide(prs, title, metrics):
         tf = tb.text_frame
         tf.word_wrap = True
         
-        # Large Value
+        # Large Value (Mono Font)
         p_val = tf.paragraphs[0]
         p_val.text = str(metric.get("value", "0"))
         p_val.alignment = PP_ALIGN.CENTER
-        p_val.font.name = "Segoe UI"
+        p_val.font.name = FONT_MONO
         p_val.font.size = Pt(54)
         p_val.font.bold = True
         p_val.font.color.rgb = border_color
@@ -221,6 +230,6 @@ def create_kpi_slide(prs, title, metrics):
         p_lbl = tf.add_paragraph()
         p_lbl.text = metric.get("label", "Metric")
         p_lbl.alignment = PP_ALIGN.CENTER
-        p_lbl.font.name = "Segoe UI"
+        p_lbl.font.name = FONT_BODY
         p_lbl.font.size = Pt(15)
         p_lbl.font.color.rgb = WHITE_TEXT
