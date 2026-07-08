@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { checkRisk } from "../api";
-import { inputStyle, buttonStyle, cardStyle, sectionLabelStyle } from "../styles";
+import { inputStyle, buttonStyle, cardStyle, sectionLabelStyle, themeColors, typography } from "../styles";
 
 export default function RiskTab({ apiKey }) {
   const [situation, setSituation] = useState("");
@@ -27,7 +27,7 @@ export default function RiskTab({ apiKey }) {
 
   return (
     <div>
-      <p style={{ color: "#94a3b8", marginTop: 0 }}>
+      <p style={{ color: themeColors.textSecondary, marginTop: 0, fontSize: "0.9rem" }}>
         Compare a prospective HR situation against past restructuring and campus recruitment reports.
       </p>
 
@@ -40,8 +40,8 @@ export default function RiskTab({ apiKey }) {
           style={{ ...inputStyle, resize: "vertical" }}
         />
 
-        <div style={{ marginTop: "0.9rem", display: "flex", alignItems: "center", gap: "0.75rem" }}>
-          <label style={{ color: "#94a3b8", fontSize: "0.85rem" }}>
+        <div style={{ marginTop: "1rem", display: "flex", alignItems: "center", gap: "0.75rem" }}>
+          <label style={{ color: themeColors.textSecondary, fontSize: "0.85rem", fontFamily: typography.mono.fontFamily }}>
             Similarity threshold: {threshold.toFixed(2)}
           </label>
           <input
@@ -51,6 +51,7 @@ export default function RiskTab({ apiKey }) {
             step="0.05"
             value={threshold}
             onChange={(e) => setThreshold(parseFloat(e.target.value))}
+            style={{ accentColor: themeColors.accentPrimary }}
           />
         </div>
 
@@ -60,28 +61,30 @@ export default function RiskTab({ apiKey }) {
       </form>
 
       {error && (
-        <div style={{ ...cardStyle, borderColor: "#f8717155", color: "#f87171" }}>{error}</div>
+        <div style={{ ...cardStyle, borderColor: `${themeColors.confidenceLow}55`, color: themeColors.confidenceLow }}>
+          {error}
+        </div>
       )}
 
       {result && (
         <div style={cardStyle}>
           <h4 style={sectionLabelStyle}>Matching Analysis</h4>
-          <p style={{ color: "#d1d5db" }}>
-            Highest cosine similarity to past report: <strong>{result.similarity.toFixed(4)}</strong>
+          <p style={{ color: themeColors.textPrimary }}>
+            Highest cosine similarity to past report: <strong style={{ fontFamily: typography.mono.fontFamily, color: themeColors.highlightAmber }}>{result.similarity.toFixed(4)}</strong>
           </p>
 
           {result.matched ? (
-            <>
-              <p style={{ color: "#4ade80", fontWeight: 600 }}>
-                Matched past situation in file: {result.matched_filename}
+            <div style={{ marginTop: "1.25rem" }}>
+              <p style={{ color: themeColors.confidenceHigh, fontWeight: 600, margin: "0 0 1rem 0" }}>
+                Matched past situation in file: <code style={{ fontFamily: typography.mono.fontFamily }}>{result.matched_filename}</code>
               </p>
-              <h3 style={{ color: "#f3f4f6" }}>Risk Analysis & Recommendation</h3>
-              <p style={{ color: "#d1d5db", lineHeight: 1.6, whiteSpace: "pre-wrap" }}>
+              <h3 style={{ ...typography.heading, fontSize: "1.25rem", margin: "1rem 0 0.5rem 0" }}>Risk Analysis & Recommendation</h3>
+              <p style={{ color: themeColors.textPrimary, lineHeight: 1.6, whiteSpace: "pre-wrap", fontSize: "0.95rem" }}>
                 {result.summary}
               </p>
-            </>
+            </div>
           ) : (
-            <p style={{ color: "#9ca3af" }}>
+            <p style={{ color: themeColors.textSecondary, fontStyle: "italic", margin: "1rem 0 0 0" }}>
               No similar past situation was found exceeding the similarity threshold.
             </p>
           )}

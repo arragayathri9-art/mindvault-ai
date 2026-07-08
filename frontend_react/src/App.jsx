@@ -5,19 +5,37 @@ import InsightsTab from "./components/InsightsTab";
 import PresentationTab from "./components/PresentationTab";
 import DocUploader from "./components/DocUploader";
 import DocumentList from "./components/DocumentList";
-import { inputStyle } from "./styles";
+import ErrorBoundary from "./components/ErrorBoundary";
 
-const TABS = [
-  { id: "ask", label: "🔍 Ask MindVault" },
-  { id: "risk", label: "⚠️ Risk Check" },
-  { id: "insights", label: "📊 Insights Dashboard" },
-  { id: "presentation", label: "💡 Generate Slides" },
+// Placeholders/stubs for new features to compile immediately
+// We will build these components in the next steps
+import MeetingsTab from "./components/MeetingsTab";
+import WorkflowsTab from "./components/WorkflowsTab";
+import GapReportsTab from "./components/GapReportsTab";
+import TeamsTab from "./components/TeamsTab";
+import OnboardingTab from "./components/OnboardingTab";
+
+import { themeColors, typography } from "./styles";
+
+const NAV_ITEMS = [
+  { id: "chat", label: "Chat", icon: "💬", badgeFill: "#3D3470" },
+  { id: "documents", label: "Knowledge Explorer", icon: "📁", badgeFill: "#4A3714" },
+  { id: "meetings", label: "Meetings", icon: "🎤", badgeFill: "#3D3470" },
+  { id: "workflows", label: "Workflows", icon: "⚡", badgeFill: "#4A3714" },
+  { id: "gaps", label: "Gap Reports", icon: "📊", badgeFill: "#3D3470" },
+  { id: "teams", label: "Teams", icon: "👥", badgeFill: "#4A3714" },
+  { id: "onboarding", label: "Onboarding", icon: "🎓", badgeFill: "#3D3470" },
+  { id: "settings", label: "Settings", icon: "⚙️", badgeFill: "#4A3714" },
 ];
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState("ask");
+  const [activeNav, setActiveNav] = useState("chat");
   const [apiKey, setApiKey] = useState("");
   const [refreshTrigger, setRefreshTrigger] = useState(0);
+  const [selectedTeam, setSelectedTeam] = useState("General");
+
+  // Keep sub-tabs for Chat
+  const [chatSubTab, setChatSubTab] = useState("ask");
 
   const handleUploadSuccess = () => setRefreshTrigger((prev) => prev + 1);
 
@@ -25,124 +43,355 @@ export default function App() {
     <div
       style={{
         minHeight: "100vh",
-        background: "linear-gradient(135deg, #1e1e38 0%, #0d0d1b 100%)",
-        fontFamily: "'Inter', system-ui, sans-serif",
-        color: "#e5e7eb",
-        padding: "2rem",
-        boxSizing: "border-box"
+        backgroundColor: themeColors.bgBase,
+        color: themeColors.textPrimary,
+        fontFamily: typography.body.fontFamily,
+        display: "flex",
+        boxSizing: "border-box",
       }}
     >
+      {/* 1. Left Icon Rail (68px) */}
       <div
         style={{
+          width: "68px",
+          backgroundColor: themeColors.panelSurface,
+          borderRight: `1px solid ${themeColors.borderDivider}`,
           display: "flex",
-          flexDirection: "row",
-          gap: "2.5rem",
-          maxWidth: "1280px",
-          margin: "0 auto",
-          flexWrap: "wrap"
+          flexDirection: "column",
+          alignItems: "center",
+          padding: "1.5rem 0",
+          gap: "1.25rem",
+          position: "fixed",
+          top: 0,
+          bottom: 0,
+          left: 0,
+          zIndex: 1000,
+          boxShadow: "4px 0 15px rgba(0,0,0,0.15)",
         }}
       >
-        {/* Left Column: Config, Ingestion, Documents */}
+        {/* Brand indicator */}
         <div
           style={{
-            flex: "0 0 380px",
-            width: "380px",
-            display: "flex",
-            flexDirection: "column",
-            gap: "1.5rem"
+            fontFamily: typography.heading.fontFamily,
+            fontSize: "1.2rem",
+            fontWeight: "bold",
+            color: themeColors.highlightAmber,
+            marginBottom: "1rem",
+            cursor: "pointer",
           }}
+          onClick={() => setActiveNav("chat")}
+          title="MindVault AI"
         >
-          <div>
-            <h1
-              style={{
-                fontSize: "2.2rem",
-                fontWeight: 800,
-                background: "linear-gradient(90deg, #a78bfa 0%, #6366f1 100%)",
-                WebkitBackgroundClip: "text",
-                WebkitTextFillColor: "transparent",
-                margin: 0,
-              }}
-            >
-              MindVault AI
-            </h1>
-            <p style={{ color: "#94a3b8", marginTop: "0.3rem", marginBottom: 0, fontSize: "0.85rem" }}>
-              Intelligent HR Knowledge Base & Risk Management
-            </p>
-          </div>
-
-          <div style={{ display: "flex", flexDirection: "column", gap: "0.4rem" }}>
-            <label
-              style={{
-                fontSize: "0.75rem",
-                textTransform: "uppercase",
-                letterSpacing: "0.05em",
-                color: "#94a3b8",
-                fontWeight: 600
-              }}
-            >
-              Groq API Config
-            </label>
-            <input
-              type="password"
-              placeholder="Groq API key (or leave blank for server key)"
-              value={apiKey}
-              onChange={(e) => setApiKey(e.target.value)}
-              autoComplete="new-password"
-              style={inputStyle}
-            />
-          </div>
-
-          <DocUploader onUploadSuccess={handleUploadSuccess} />
-          
-          <DocumentList refreshTrigger={refreshTrigger} />
+          MV
         </div>
 
-        {/* Right Column: Main Console */}
-        <div
-          style={{
-            flex: "1 1 500px",
-            display: "flex",
-            flexDirection: "column",
-            gap: "1.5rem"
-          }}
-        >
-          {/* Tabs Control */}
+        {NAV_ITEMS.map((item) => {
+          const isActive = activeNav === item.id;
+          return (
+            <button
+              key={item.id}
+              onClick={() => setActiveNav(item.id)}
+              style={{
+                width: "44px",
+                height: "44px",
+                borderRadius: "50%",
+                backgroundColor: isActive ? themeColors.accentPrimary : item.badgeFill,
+                border: isActive ? `2px solid ${themeColors.highlightAmber}` : "none",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                cursor: "pointer",
+                fontSize: "1.2rem",
+                transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
+                outline: "none",
+                position: "relative",
+              }}
+              title={item.label}
+            >
+              <span style={{ transform: isActive ? "scale(1.1)" : "scale(1)" }}>{item.icon}</span>
+            </button>
+          );
+        })}
+      </div>
+
+      {/* 2. Main Content Workspace */}
+      <div
+        style={{
+          marginLeft: "68px",
+          flex: 1,
+          padding: "2.5rem",
+          boxSizing: "border-box",
+          minWidth: 0, // Prevent flex items from overflowing
+        }}
+      >
+        {/* Header Eyebrow + Serif Pattern */}
+        <div style={{ marginBottom: "2rem" }}>
           <div
             style={{
-              display: "flex",
-              gap: "0.5rem",
-              borderBottom: "1px solid rgba(255, 255, 255, 0.08)",
-              paddingBottom: "0.75rem",
+              fontFamily: typography.mono.fontFamily,
+              fontSize: "0.75rem",
+              textTransform: "uppercase",
+              letterSpacing: "0.06em",
+              color: themeColors.highlightAmber,
+              marginBottom: "0.25rem",
             }}
           >
-            {TABS.map((tab) => (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
+            MindVault Dashboard
+          </div>
+          <h1
+            style={{
+              fontFamily: typography.heading.fontFamily,
+              fontSize: "2.2rem",
+              fontWeight: 700,
+              margin: 0,
+              color: themeColors.textPrimary,
+            }}
+          >
+            {NAV_ITEMS.find((n) => n.id === activeNav)?.label || "Workspace"}
+          </h1>
+        </div>
+
+        {/* View Routing with Error Boundaries */}
+        <div style={{ position: "relative", width: "100%" }}>
+          {/* A. Chat View (Centered Pane) */}
+          {activeNav === "chat" && (
+            <div style={{ maxWidth: "720px", margin: "0 auto" }}>
+              {/* Sub-tabs: Ask / Risk Check / Generate Slides */}
+              <div
                 style={{
-                  background: activeTab === tab.id ? "rgba(167,139,250,0.15)" : "transparent",
-                  color: activeTab === tab.id ? "#a78bfa" : "#94a3b8",
-                  border: "none",
-                  borderRadius: "8px",
-                  padding: "0.6rem 1.2rem",
-                  fontSize: "0.95rem",
-                  fontWeight: 600,
-                  cursor: "pointer",
-                  transition: "all 0.2s ease-in-out",
+                  display: "flex",
+                  gap: "0.5rem",
+                  borderBottom: `1px solid ${themeColors.borderDivider}`,
+                  paddingBottom: "0.75rem",
+                  marginBottom: "1.5rem",
                 }}
               >
-                {tab.label}
-              </button>
-            ))}
-          </div>
+                {[
+                  { id: "ask", label: "🔍 Ask MindVault" },
+                  { id: "risk", label: "⚠️ Risk Check" },
+                  { id: "presentation", label: "💡 Generate Slides" },
+                ].map((sub) => (
+                  <button
+                    key={sub.id}
+                    onClick={() => setChatSubTab(sub.id)}
+                    style={{
+                      background: chatSubTab === sub.id ? "rgba(75, 63, 158, 0.25)" : "transparent",
+                      color: chatSubTab === sub.id ? themeColors.textPrimary : themeColors.textSecondary,
+                      border: "none",
+                      borderRadius: "8px",
+                      padding: "0.6rem 1.2rem",
+                      fontSize: "0.9rem",
+                      fontWeight: 600,
+                      cursor: "pointer",
+                      fontFamily: typography.body.fontFamily,
+                      transition: "all 0.2s ease",
+                    }}
+                  >
+                    {sub.label}
+                  </button>
+                ))}
+              </div>
 
-          {/* Active Console Panel */}
-          <div style={{ minHeight: "400px" }}>
-            {activeTab === "ask" && <AskTab apiKey={apiKey} />}
-            {activeTab === "risk" && <RiskTab apiKey={apiKey} />}
-            {activeTab === "insights" && <InsightsTab />}
-            {activeTab === "presentation" && <PresentationTab apiKey={apiKey} />}
-          </div>
+              <div style={{ minHeight: "400px" }}>
+                {chatSubTab === "ask" && (
+                  <ErrorBoundary>
+                    <AskTab apiKey={apiKey} selectedTeam={selectedTeam} />
+                  </ErrorBoundary>
+                )}
+                {chatSubTab === "risk" && (
+                  <ErrorBoundary>
+                    <RiskTab apiKey={apiKey} />
+                  </ErrorBoundary>
+                )}
+                {chatSubTab === "presentation" && (
+                  <ErrorBoundary>
+                    <PresentationTab apiKey={apiKey} />
+                  </ErrorBoundary>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* B. Knowledge Explorer View */}
+          {activeNav === "documents" && (
+            <div
+              style={{
+                display: "flex",
+                flexDirection: "row",
+                gap: "2.5rem",
+                flexWrap: "wrap",
+                alignItems: "flex-start",
+              }}
+            >
+              <div style={{ flex: "1 1 380px", maxWidth: "450px" }}>
+                <ErrorBoundary>
+                  <DocUploader onUploadSuccess={handleUploadSuccess} />
+                </ErrorBoundary>
+              </div>
+              <div style={{ flex: "2 1 500px" }}>
+                <ErrorBoundary>
+                  <DocumentList refreshTrigger={refreshTrigger} />
+                </ErrorBoundary>
+              </div>
+            </div>
+          )}
+
+          {/* C. Meetings View (Voice-to-Text) */}
+          {activeNav === "meetings" && (
+            <ErrorBoundary>
+              <MeetingsTab apiKey={apiKey} selectedTeam={selectedTeam} onUploadSuccess={handleUploadSuccess} />
+            </ErrorBoundary>
+          )}
+
+          {/* D. Workflows View */}
+          {activeNav === "workflows" && (
+            <ErrorBoundary>
+              <WorkflowsTab apiKey={apiKey} selectedTeam={selectedTeam} />
+            </ErrorBoundary>
+          )}
+
+          {/* E. Gap Reports View */}
+          {activeNav === "gaps" && (
+            <div style={{ display: "flex", flexDirection: "column", gap: "2rem" }}>
+              <ErrorBoundary>
+                <GapReportsTab />
+              </ErrorBoundary>
+              <ErrorBoundary>
+                <div style={{ marginTop: "1rem" }}>
+                  <div
+                    style={{
+                      fontFamily: typography.mono.fontFamily,
+                      fontSize: "0.75rem",
+                      textTransform: "uppercase",
+                      letterSpacing: "0.06em",
+                      color: themeColors.highlightAmber,
+                      marginBottom: "0.25rem",
+                    }}
+                  >
+                    SYSTEM INSIGHTS
+                  </div>
+                  <h3
+                    style={{
+                      fontFamily: typography.heading.fontFamily,
+                      fontSize: "1.5rem",
+                      margin: "0 0 1.25rem 0",
+                    }}
+                  >
+                    Usage Analytics & Experts
+                  </h3>
+                  <InsightsTab />
+                </div>
+              </ErrorBoundary>
+            </div>
+          )}
+
+          {/* F. Teams View */}
+          {activeNav === "teams" && (
+            <ErrorBoundary>
+              <TeamsTab selectedTeam={selectedTeam} setSelectedTeam={setSelectedTeam} />
+            </ErrorBoundary>
+          )}
+
+          {/* G. Onboarding View */}
+          {activeNav === "onboarding" && (
+            <ErrorBoundary>
+              <OnboardingTab apiKey={apiKey} />
+            </ErrorBoundary>
+          )}
+
+          {/* H. Settings View */}
+          {activeNav === "settings" && (
+            <div style={{ maxWidth: "600px" }}>
+              <div
+                style={{
+                  background: themeColors.panelSurface,
+                  border: `1px solid ${themeColors.borderDivider}`,
+                  borderRadius: "14px",
+                  padding: "2rem",
+                  boxShadow: "0 4px 12px rgba(0, 0, 0, 0.15)",
+                }}
+              >
+                <h3
+                  style={{
+                    fontFamily: typography.heading.fontFamily,
+                    marginTop: 0,
+                    marginBottom: "1rem",
+                  }}
+                >
+                  System Configuration
+                </h3>
+
+                <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+                  <div style={{ display: "flex", flexDirection: "column", gap: "0.4rem" }}>
+                    <label
+                      style={{
+                        fontSize: "0.75rem",
+                        textTransform: "uppercase",
+                        letterSpacing: "0.05em",
+                        color: themeColors.textSecondary,
+                        fontWeight: 600,
+                      }}
+                    >
+                      Groq API Key
+                    </label>
+                    <input
+                      type="password"
+                      placeholder="Groq API key (e.g. gsk_... or leave blank to use server key)"
+                      value={apiKey}
+                      onChange={(e) => setApiKey(e.target.value)}
+                      autoComplete="new-password"
+                      style={{
+                        padding: "0.8rem 1rem",
+                        borderRadius: "10px",
+                        border: `1px solid ${themeColors.borderDivider}`,
+                        background: "#120B21",
+                        color: themeColors.textPrimary,
+                        fontSize: "0.95rem",
+                        outline: "none",
+                      }}
+                    />
+                    <p style={{ color: themeColors.textSecondary, fontSize: "0.8rem", margin: 0 }}>
+                      If not provided, the server will fallback to the default <code>GROQ_API_KEY</code> environment variable.
+                    </p>
+                  </div>
+
+                  <div
+                    style={{
+                      borderTop: `1px solid ${themeColors.borderDivider}`,
+                      paddingTop: "1rem",
+                      marginTop: "0.5rem",
+                    }}
+                  >
+                    <h4
+                      style={{
+                        margin: "0 0 0.5rem 0",
+                        fontSize: "0.95rem",
+                        color: themeColors.textPrimary,
+                      }}
+                    >
+                      Active Filter Profile
+                    </h4>
+                    <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                      <span style={{ fontSize: "0.85rem", color: themeColors.textSecondary }}>Selected Team Context:</span>
+                      <span
+                        style={{
+                          background: "rgba(240, 167, 66, 0.15)",
+                          border: "1px solid rgba(240, 167, 66, 0.3)",
+                          color: themeColors.highlightAmber,
+                          padding: "0.2rem 0.6rem",
+                          borderRadius: "6px",
+                          fontSize: "0.85rem",
+                          fontWeight: "bold",
+                        }}
+                      >
+                        {selectedTeam}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>

@@ -2,10 +2,11 @@ import axios from "axios";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000";
 
-export async function askMindVault(query, apiKey) {
+export async function askMindVault(query, apiKey, teamId = "General") {
   const response = await axios.post(`${API_BASE_URL}/api/ask`, {
     query,
     api_key: apiKey || null,
+    team_id: teamId || "General"
   });
   return response.data;
 }
@@ -29,10 +30,10 @@ export async function checkHealth() {
   return response.data;
 }
 
-export async function uploadDoc(file) {
+export async function uploadDoc(file, teamId = "General") {
   const formData = new FormData();
   formData.append("file", file);
-  const response = await axios.post(`${API_BASE_URL}/api/upload-doc`, formData, {
+  const response = await axios.post(`${API_BASE_URL}/api/upload-doc?team_id=${encodeURIComponent(teamId)}`, formData, {
     headers: {
       "Content-Type": "multipart/form-data",
     },
@@ -62,5 +63,109 @@ export async function listDocuments() {
 
 export async function deleteDocument(filename) {
   const response = await axios.delete(`${API_BASE_URL}/api/documents/${encodeURIComponent(filename)}`);
+  return response.data;
+}
+
+// ==========================================
+// ADDITIVE METHODS FOR THE 5 NEW FEATURES
+// ==========================================
+
+// 1. Multi-team endpoints
+export async function getTeams() {
+  const response = await axios.get(`${API_BASE_URL}/api/teams`);
+  return response.data;
+}
+
+export async function createTeam(name) {
+  const response = await axios.post(`${API_BASE_URL}/api/teams`, { name });
+  return response.data;
+}
+
+export async function assignDocumentTeam(filename, teamId) {
+  const response = await axios.post(`${API_BASE_URL}/api/documents/${encodeURIComponent(filename)}/team`, {
+    team_id: teamId
+  });
+  return response.data;
+}
+
+// 2. Workflows endpoints
+export async function getWorkflowRules() {
+  const response = await axios.get(`${API_BASE_URL}/api/workflows/rules`);
+  return response.data;
+}
+
+export async function createWorkflowRule(payload) {
+  const response = await axios.post(`${API_BASE_URL}/api/workflows/rules`, payload);
+  return response.data;
+}
+
+export async function deleteWorkflowRule(ruleId) {
+  const response = await axios.delete(`${API_BASE_URL}/api/workflows/rules/${ruleId}`);
+  return response.data;
+}
+
+export async function getWorkflowLogs() {
+  const response = await axios.get(`${API_BASE_URL}/api/workflows/log`);
+  return response.data;
+}
+
+export async function approveWorkflowLog(logId) {
+  const response = await axios.post(`${API_BASE_URL}/api/workflows/log/${logId}/approve`);
+  return response.data;
+}
+
+// 3. Gap Reports endpoints
+export async function getGapReports(apiKey) {
+  const response = await axios.get(`${API_BASE_URL}/api/reports/gaps`, {
+    params: { api_key: apiKey || null }
+  });
+  return response.data;
+}
+
+// 4. Onboarding suggestions endpoints
+export async function getOnboardingSuggestions(role, apiKey) {
+  const response = await axios.get(`${API_BASE_URL}/api/onboarding/suggestions`, {
+    params: { role, api_key: apiKey || null }
+  });
+  return response.data;
+}
+
+export async function logOnboardingProgress(role, itemId) {
+  const response = await axios.post(`${API_BASE_URL}/api/onboarding/progress`, {
+    role,
+    item_id: itemId
+  });
+  return response.data;
+}
+
+export async function getOnboardingProgress(role) {
+  const response = await axios.get(`${API_BASE_URL}/api/onboarding/progress`, {
+    params: { role }
+  });
+  return response.data;
+}
+
+// 5. Meetings transcribe
+export async function transcribeMeeting(file, teamId = "General", apiKey) {
+  const formData = new FormData();
+  formData.append("file", file);
+  
+  let url = `${API_BASE_URL}/api/meetings/transcribe?team_id=${encodeURIComponent(teamId)}`;
+  if (apiKey) {
+    url += `&api_key=${encodeURIComponent(apiKey)}`;
+  }
+  
+  const response = await axios.post(url, formData, {
+    headers: {
+      "Content-Type": "multipart/form-data",
+    },
+  });
+  return response.data;
+}
+
+export async function listMeetings(teamId = null) {
+  const params = {};
+  if (teamId) params.team_id = teamId;
+  const response = await axios.get(`${API_BASE_URL}/api/meetings`, { params });
   return response.data;
 }

@@ -30,7 +30,7 @@ class Retriever:
                 self.embeddings = None
                 self.metadata = None
                 
-    def retrieve(self, query, top_k=3):
+    def retrieve(self, query, top_k=3, allowed_sources=None):
         """
         Embeds the query and computes cosine similarity against all document chunks.
         Returns a list of dicts with 'text', 'source', and 'score'.
@@ -57,11 +57,21 @@ class Retriever:
         
         similarities = np.dot(normalized_embeddings, query_vector_norm)
         
+        # Apply team filter if allowed_sources is provided
+        if allowed_sources is not None:
+            allowed_set = set(allowed_sources)
+            for idx in range(len(similarities)):
+                source = self.metadata[idx].get("source")
+                if source not in allowed_set:
+                    similarities[idx] = -1.0
+        
         # Get top K indices
         top_indices = np.argsort(similarities)[::-1][:top_k]
         
         results = []
         for idx in top_indices:
+            if similarities[idx] < -0.9:
+                continue
             score = float(similarities[idx])
             results.append({
                 "text": self.metadata[idx]["text"],

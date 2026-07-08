@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { generatePPT } from "../api";
-import { cardStyle, buttonStyle, inputStyle, sectionLabelStyle } from "../styles";
+import { cardStyle, buttonStyle, inputStyle, sectionLabelStyle, themeColors } from "../styles";
 
 export default function PresentationTab({ apiKey }) {
   const [topic, setTopic] = useState("");
@@ -57,10 +57,10 @@ export default function PresentationTab({ apiKey }) {
     <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
       {/* Option 1: AI Custom Deck */}
       <div style={cardStyle}>
-        <h2 style={{ fontSize: "1.3rem", fontWeight: 700, margin: "0 0 0.5rem 0", color: "#a78bfa" }}>
+        <h2 style={{ fontSize: "1.3rem", fontWeight: 700, margin: "0 0 0.5rem 0", color: themeColors.highlightAmber, fontFamily: "'Lora', serif" }}>
           💡 AI PowerPoint Builder
         </h2>
-        <p style={{ color: "#94a3b8", fontSize: "0.9rem", margin: "0 0 1.2rem 0", lineHeight: "1.4" }}>
+        <p style={{ color: themeColors.textSecondary, fontSize: "0.9rem", margin: "0 0 1.2rem 0", lineHeight: "1.4" }}>
           Provide any topic, question, or outline, and MindVault AI will generate a complete, custom slide deck using Groq reasoning.
         </p>
 
@@ -106,10 +106,10 @@ export default function PresentationTab({ apiKey }) {
 
       {/* Option 2: Insights Dashboard Deck */}
       <div style={cardStyle}>
-        <h2 style={{ fontSize: "1.3rem", fontWeight: 700, margin: "0 0 0.5rem 0", color: "#6366f1" }}>
+        <h2 style={{ fontSize: "1.3rem", fontWeight: 700, margin: "0 0 0.5rem 0", color: themeColors.textPrimary, fontFamily: "'Lora', serif" }}>
           📊 Export System Insights Deck
         </h2>
-        <p style={{ color: "#94a3b8", fontSize: "0.9rem", margin: "0 0 1.2rem 0", lineHeight: "1.4" }}>
+        <p style={{ color: themeColors.textSecondary, fontSize: "0.9rem", margin: "0 0 1.2rem 0", lineHeight: "1.4" }}>
           Generate a formal presentation detailing system usage stats, index file counts, identified knowledge gaps, and HR expert coverage maps.
         </p>
 
@@ -118,7 +118,7 @@ export default function PresentationTab({ apiKey }) {
           disabled={loadingMode !== null}
           style={{
             ...buttonStyle,
-            background: "linear-gradient(90deg, #6366f1 0%, #4f46e5 100%)",
+            background: `linear-gradient(135deg, ${themeColors.accentPrimary} 0%, #312680 100%)`,
             opacity: loadingMode !== null ? 0.6 : 1,
             cursor: loadingMode !== null ? "not-allowed" : "pointer",
             width: "100%",
