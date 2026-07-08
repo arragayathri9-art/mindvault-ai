@@ -96,8 +96,16 @@ export default function MeetingsTab({ apiKey, selectedTeam, onUploadSuccess }) {
     setLoading(true);
     setError("");
     try {
-      const audioBlob = new Blob(audioChunks, { type: "audio/wav" });
-      const file = new File([audioBlob], `recorded_meeting_${Date.now()}.wav`, { type: "audio/wav" });
+      const mimeType = mediaRecorder?.mimeType || "audio/webm";
+      const cleanMime = mimeType.split(";")[0];
+      let ext = cleanMime.split("/")[1] || "webm";
+      // Handle chrome x-matroska wrapper fallback
+      if (ext.includes("webm") || ext.includes("matroska")) {
+        ext = "webm";
+      }
+      
+      const audioBlob = new Blob(audioChunks, { type: mimeType });
+      const file = new File([audioBlob], `recorded_meeting_${Date.now()}.${ext}`, { type: mimeType });
       
       const data = await transcribeMeeting(file, targetTeam, apiKey);
       setAudioChunks([]);
