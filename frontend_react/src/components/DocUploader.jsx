@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import axios from "axios";
 import { cardStyle, themeColors, inputStyle, typography } from "../styles";
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000";
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || (import.meta.env.DEV ? "http://localhost:8000" : "");
 
 export default function DocUploader({ onUploadSuccess }) {
   const [isDragOver, setIsDragOver] = useState(false);

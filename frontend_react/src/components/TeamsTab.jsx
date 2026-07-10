@@ -3,7 +3,7 @@ import axios from "axios";
 import { getTeams, createTeam, listDocuments } from "../api";
 import { cardStyle, buttonStyle, inputStyle, themeColors, typography, sectionLabelStyle } from "../styles";
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000";
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || (import.meta.env.DEV ? "http://localhost:8000" : "");
 
 export default function TeamsTab({ selectedTeam, setSelectedTeam }) {
   const [teams, setTeams] = useState([]);

@@ -3,7 +3,7 @@ import axios from "axios";
 import { listDocuments, deleteDocument } from "../api";
 import { cardStyle, pillStyle, linkButtonStyle, themeColors, typography, inputStyle } from "../styles";
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000";
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || (import.meta.env.DEV ? "http://localhost:8000" : "");
 
 function formatBytes(bytes) {
   if (bytes === 0) return "0 Bytes";

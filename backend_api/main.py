@@ -1026,3 +1026,17 @@ def get_meetings(team_id: str | None = None):
         return db.get_all_meetings(team_id)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
+
+FRONTEND_DIST_DIR = os.path.join(os.path.dirname(BASE_DIR), "frontend_react", "dist")
+
+if os.path.exists(FRONTEND_DIST_DIR):
+    app.mount("/", StaticFiles(directory=FRONTEND_DIST_DIR, html=True), name="static")
+
+    @app.get("/{catchall:path}")
+    def serve_spa(catchall: str):
+        return FileResponse(os.path.join(FRONTEND_DIST_DIR, "index.html"))
+
