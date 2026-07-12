@@ -6,25 +6,31 @@ import PresentationTab from "./components/PresentationTab";
 import DocUploader from "./components/DocUploader";
 import DocumentList from "./components/DocumentList";
 import ErrorBoundary from "./components/ErrorBoundary";
-
-// Placeholders/stubs for new features to compile immediately
-// We will build these components in the next steps
 import MeetingsTab from "./components/MeetingsTab";
 import WorkflowsTab from "./components/WorkflowsTab";
 import GapReportsTab from "./components/GapReportsTab";
 import TeamsTab from "./components/TeamsTab";
 import OnboardingTab from "./components/OnboardingTab";
 
+// Copilot New Components
+import CopilotDashboard from "./components/CopilotDashboard";
+import EmailGenerator from "./components/EmailGenerator";
+import ReportGenerator from "./components/ReportGenerator";
+import AdminDashboard from "./components/AdminDashboard";
+
 import { themeColors, typography } from "./styles";
 
 const NAV_ITEMS = [
-  { id: "chat", label: "Chat", icon: "💬", badgeFill: "#3D3470" },
+  { id: "chat", label: "Employee Copilot", icon: "🤖", badgeFill: "#3D3470" },
   { id: "documents", label: "Knowledge Explorer", icon: "📁", badgeFill: "#4A3714" },
   { id: "meetings", label: "Meetings", icon: "🎤", badgeFill: "#3D3470" },
+  { id: "emails", label: "Email Generator", icon: "📧", badgeFill: "#4A3714" },
+  { id: "reports", label: "Report Generator", icon: "📝", badgeFill: "#3D3470" },
   { id: "workflows", label: "Workflows", icon: "⚡", badgeFill: "#4A3714" },
   { id: "gaps", label: "Gap Reports", icon: "📊", badgeFill: "#3D3470" },
   { id: "teams", label: "Teams", icon: "👥", badgeFill: "#4A3714" },
   { id: "onboarding", label: "Onboarding", icon: "🎓", badgeFill: "#3D3470" },
+  { id: "admin", label: "Admin Dashboard", icon: "🛡️", badgeFill: "#4A3714" },
   { id: "settings", label: "Settings", icon: "⚙️", badgeFill: "#4A3714" },
 ];
 
@@ -34,8 +40,8 @@ export default function App() {
   const [refreshTrigger, setRefreshTrigger] = useState(0);
   const [selectedTeam, setSelectedTeam] = useState("General");
 
-  // Keep sub-tabs for Chat
-  const [chatSubTab, setChatSubTab] = useState("ask");
+  // Default to Copilot Dashboard
+  const [chatSubTab, setChatSubTab] = useState("copilot");
 
   const handleUploadSuccess = () => setRefreshTrigger((prev) => prev + 1);
 
@@ -59,14 +65,15 @@ export default function App() {
           display: "flex",
           flexDirection: "column",
           alignItems: "center",
-          padding: "1.5rem 0",
-          gap: "1.25rem",
+          padding: "1rem 0",
+          gap: "0.75rem",
           position: "fixed",
           top: 0,
           bottom: 0,
           left: 0,
           zIndex: 1000,
           boxShadow: "4px 0 15px rgba(0,0,0,0.15)",
+          overflowY: "auto",
         }}
       >
         {/* Brand indicator */}
@@ -155,8 +162,8 @@ export default function App() {
         <div style={{ position: "relative", width: "100%" }}>
           {/* A. Chat View (Centered Pane) */}
           {activeNav === "chat" && (
-            <div style={{ maxWidth: "720px", margin: "0 auto" }}>
-              {/* Sub-tabs: Ask / Risk Check / Generate Slides */}
+            <div style={{ maxWidth: chatSubTab === "copilot" ? "1200px" : "720px", margin: "0 auto" }}>
+              {/* Sub-tabs: Copilot / Ask / Risk Check / Generate Slides */}
               <div
                 style={{
                   display: "flex",
@@ -164,9 +171,11 @@ export default function App() {
                   borderBottom: `1px solid ${themeColors.borderDivider}`,
                   paddingBottom: "0.75rem",
                   marginBottom: "1.5rem",
+                  overflowX: "auto"
                 }}
               >
                 {[
+                  { id: "copilot", label: "🤖 Copilot Dashboard" },
                   { id: "ask", label: "🔍 Ask MindVault" },
                   { id: "risk", label: "⚠️ Risk Check" },
                   { id: "presentation", label: "💡 Generate Slides" },
@@ -185,6 +194,7 @@ export default function App() {
                       cursor: "pointer",
                       fontFamily: typography.body.fontFamily,
                       transition: "all 0.2s ease",
+                      whiteSpace: "nowrap"
                     }}
                   >
                     {sub.label}
@@ -193,6 +203,11 @@ export default function App() {
               </div>
 
               <div style={{ minHeight: "400px" }}>
+                {chatSubTab === "copilot" && (
+                  <ErrorBoundary>
+                    <CopilotDashboard apiKey={apiKey} selectedTeam={selectedTeam} setActiveNav={setActiveNav} />
+                  </ErrorBoundary>
+                )}
                 {chatSubTab === "ask" && (
                   <ErrorBoundary>
                     <AskTab apiKey={apiKey} selectedTeam={selectedTeam} />
@@ -296,6 +311,27 @@ export default function App() {
           {activeNav === "onboarding" && (
             <ErrorBoundary>
               <OnboardingTab apiKey={apiKey} />
+            </ErrorBoundary>
+          )}
+
+          {/* Email Generator View */}
+          {activeNav === "emails" && (
+            <ErrorBoundary>
+              <EmailGenerator apiKey={apiKey} />
+            </ErrorBoundary>
+          )}
+
+          {/* Report Generator View */}
+          {activeNav === "reports" && (
+            <ErrorBoundary>
+              <ReportGenerator apiKey={apiKey} />
+            </ErrorBoundary>
+          )}
+
+          {/* Admin Dashboard View */}
+          {activeNav === "admin" && (
+            <ErrorBoundary>
+              <AdminDashboard />
             </ErrorBoundary>
           )}
 

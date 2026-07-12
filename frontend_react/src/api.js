@@ -169,3 +169,61 @@ export async function listMeetings(teamId = null) {
   const response = await axios.get(`${API_BASE_URL}/api/meetings`, { params });
   return response.data;
 }
+
+// 6. Copilot New APIs
+export async function generateEmail(payload) {
+  const response = await axios.post(`${API_BASE_URL}/api/generate-email`, payload);
+  return response.data;
+}
+
+export async function generateReport(payload) {
+  const response = await axios.post(`${API_BASE_URL}/api/generate-report`, payload);
+  return response.data;
+}
+
+export async function getDashboard(assignedTo = null) {
+  const params = {};
+  if (assignedTo) params.assigned_to = assignedTo;
+  const response = await axios.get(`${API_BASE_URL}/api/dashboard`, { params });
+  return response.data;
+}
+
+export async function getAnalytics() {
+  const response = await axios.get(`${API_BASE_URL}/api/analytics`);
+  return response.data;
+}
+
+export async function getActivity() {
+  const response = await axios.get(`${API_BASE_URL}/api/activity`);
+  return response.data;
+}
+
+export async function getNotifications() {
+  const response = await axios.get(`${API_BASE_URL}/api/notifications`);
+  return response.data;
+}
+
+export async function markNotificationRead(notifId) {
+  const response = await axios.post(`${API_BASE_URL}/api/notifications/${notifId}/read`);
+  return response.data;
+}
+
+export async function getRecommendations(query, answer, apiKey) {
+  const response = await axios.post(`${API_BASE_URL}/api/recommendations`, {
+    query,
+    answer,
+    api_key: apiKey || null
+  });
+  return response.data;
+}
+
+export async function createTask(payload) {
+  const response = await axios.post(`${API_BASE_URL}/api/tasks`, payload);
+  return response.data;
+}
+
+export async function updateTaskStatus(taskId, status) {
+  const response = await axios.post(`${API_BASE_URL}/api/tasks/${taskId}/status`, { status });
+  return response.data;
+}
+

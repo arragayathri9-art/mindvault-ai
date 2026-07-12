@@ -120,6 +120,94 @@ def init_db():
             UNIQUE(role, item_id) ON CONFLICT REPLACE
         )
     """)
+
+    # 8. Notifications table
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS notifications (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            title TEXT NOT NULL,
+            content TEXT NOT NULL,
+            type TEXT NOT NULL,
+            status TEXT DEFAULT 'unread',
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
+
+    # 9. Tasks table
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS tasks (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            title TEXT NOT NULL,
+            description TEXT,
+            assigned_to TEXT NOT NULL,
+            status TEXT DEFAULT 'pending',
+            priority TEXT DEFAULT 'medium',
+            deadline TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
+
+    # 10. Activity log table
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS activity_log (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            activity_type TEXT NOT NULL,
+            description TEXT NOT NULL,
+            details TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
+
+    # 11. Generated emails table
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS generated_emails (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            template_type TEXT,
+            recipient TEXT,
+            subject TEXT,
+            body TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
+
+    # 12. Generated reports table
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS generated_reports (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            report_type TEXT,
+            title TEXT,
+            content TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
+
+    # 13. Workflow instances table
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS workflow_instances (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            template_name TEXT,
+            current_step TEXT,
+            status TEXT DEFAULT 'in_progress',
+            steps_data TEXT, -- JSON string representation
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
+
+    # Add default tasks if empty
+    cursor.execute("SELECT COUNT(*) FROM tasks")
+    if cursor.fetchone()[0] == 0:
+        cursor.execute("""
+            INSERT INTO tasks (title, description, assigned_to, status, priority, deadline)
+            VALUES ('Review Holiday Policy', 'Review the newly uploaded 2026 holiday guidelines and note changes.', 'General', 'pending', 'medium', '2026-07-20')
+        """)
+        cursor.execute("""
+            INSERT INTO tasks (title, description, assigned_to, status, priority, deadline)
+            VALUES ('Verify Engineering Guidelines', 'Check engineering compliance rules matches QA requirements.', 'Engineering', 'pending', 'high', '2026-07-15')
+        """)
+        cursor.execute("""
+            INSERT INTO tasks (title, description, assigned_to, status, priority, deadline)
+            VALUES ('Onboard Marketing Leads', 'Setup training plans for onboarding marketing agents.', 'HR Operations', 'pending', 'low', '2026-07-25')
+        """)
     
     conn.commit()
     conn.close()
@@ -316,3 +404,166 @@ def get_onboarding_completed_items(role):
     completed = [row["item_id"] for row in cursor.fetchall()]
     conn.close()
     return completed
+
+# NOTIFICATIONS DB HELPERS
+def add_notification(title, content, type_str):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("""
+        INSERT INTO notifications (title, content, type)
+        VALUES (?, ?, ?)
+    """, (title, content, type_str))
+    conn.commit()
+    notif_id = cursor.lastrowid
+    conn.close()
+    return notif_id
+
+def get_notifications(limit=50):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM notifications ORDER BY created_at DESC LIMIT ?", (limit,))
+    rows = cursor.fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
+
+def mark_notification_read(notif_id):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("UPDATE notifications SET status = 'read' WHERE id = ?", (notif_id,))
+    conn.commit()
+    conn.close()
+
+# TASKS DB HELPERS
+def add_task(title, description, assigned_to, priority="medium", deadline=None):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("""
+        INSERT INTO tasks (title, description, assigned_to, priority, deadline)
+        VALUES (?, ?, ?, ?, ?)
+    """, (title, description, assigned_to, priority, deadline))
+    conn.commit()
+    task_id = cursor.lastrowid
+    conn.close()
+    return task_id
+
+def get_tasks(assigned_to=None):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    if assigned_to:
+        cursor.execute("SELECT * FROM tasks WHERE assigned_to = ? ORDER BY deadline ASC, created_at DESC", (assigned_to,))
+    else:
+        cursor.execute("SELECT * FROM tasks ORDER BY deadline ASC, created_at DESC")
+    rows = cursor.fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
+
+def update_task(task_id, status):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("UPDATE tasks SET status = ? WHERE id = ?", (status, task_id))
+    conn.commit()
+    conn.close()
+
+# ACTIVITY LOG DB HELPERS
+def add_activity(activity_type, description, details=None):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("""
+        INSERT INTO activity_log (activity_type, description, details)
+        VALUES (?, ?, ?)
+    """, (activity_type, description, details))
+    conn.commit()
+    activity_id = cursor.lastrowid
+    conn.close()
+    return activity_id
+
+def get_activities(limit=50):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM activity_log ORDER BY created_at DESC LIMIT ?", (limit,))
+    rows = cursor.fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
+
+# GENERATED EMAILS DB HELPERS
+def save_email(template_type, recipient, subject, body):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("""
+        INSERT INTO generated_emails (template_type, recipient, subject, body)
+        VALUES (?, ?, ?, ?)
+    """, (template_type, recipient, subject, body))
+    conn.commit()
+    email_id = cursor.lastrowid
+    conn.close()
+    return email_id
+
+def get_emails(limit=20):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM generated_emails ORDER BY created_at DESC LIMIT ?", (limit,))
+    rows = cursor.fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
+
+# GENERATED REPORTS DB HELPERS
+def save_report(report_type, title, content):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("""
+        INSERT INTO generated_reports (report_type, title, content)
+        VALUES (?, ?, ?)
+    """, (report_type, title, content))
+    conn.commit()
+    report_id = cursor.lastrowid
+    conn.close()
+    return report_id
+
+def get_reports(limit=20):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM generated_reports ORDER BY created_at DESC LIMIT ?", (limit,))
+    rows = cursor.fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
+
+# WORKFLOW INSTANCES DB HELPERS
+def create_workflow_instance(template_name, current_step, status, steps_data):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("""
+        INSERT INTO workflow_instances (template_name, current_step, status, steps_data)
+        VALUES (?, ?, ?, ?)
+    """, (template_name, current_step, status, json.dumps(steps_data)))
+    conn.commit()
+    instance_id = cursor.lastrowid
+    conn.close()
+    return instance_id
+
+def get_workflow_instances():
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM workflow_instances ORDER BY created_at DESC")
+    rows = cursor.fetchall()
+    conn.close()
+    
+    instances = []
+    for r in rows:
+        item = dict(r)
+        try:
+            item["steps_data"] = json.loads(item["steps_data"])
+        except Exception:
+            item["steps_data"] = []
+        instances.append(item)
+    return instances
+
+def update_workflow_instance(instance_id, current_step, status, steps_data):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("""
+        UPDATE workflow_instances 
+        SET current_step = ?, status = ?, steps_data = ? 
+        WHERE id = ?
+    """, (current_step, status, json.dumps(steps_data), instance_id))
+    conn.commit()
+    conn.close()

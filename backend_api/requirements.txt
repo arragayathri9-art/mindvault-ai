@@ -4,3 +4,5 @@ groq
 numpy
 python-pptx
 python-multipart
+python-docx
+reportlab
