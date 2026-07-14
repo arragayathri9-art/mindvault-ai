@@ -17,6 +17,7 @@ import CopilotDashboard from "./components/CopilotDashboard";
 import EmailGenerator from "./components/EmailGenerator";
 import ReportGenerator from "./components/ReportGenerator";
 import AdminDashboard from "./components/AdminDashboard";
+import SupportTab from "./components/SupportTab";
 
 import { themeColors, typography } from "./styles";
 
@@ -179,6 +180,7 @@ export default function App() {
                   { id: "ask", label: "🔍 Ask MindVault" },
                   { id: "risk", label: "⚠️ Risk Check" },
                   { id: "presentation", label: "💡 Generate Slides" },
+                  { id: "support", label: "📞 Support Agent" },
                 ].map((sub) => (
                   <button
                     key={sub.id}
@@ -218,9 +220,14 @@ export default function App() {
                     <RiskTab apiKey={apiKey} />
                   </ErrorBoundary>
                 )}
-                {chatSubTab === "presentation" && (
+                 {chatSubTab === "presentation" && (
                   <ErrorBoundary>
                     <PresentationTab apiKey={apiKey} />
+                  </ErrorBoundary>
+                )}
+                {chatSubTab === "support" && (
+                  <ErrorBoundary>
+                    <SupportTab apiKey={apiKey} />
                   </ErrorBoundary>
                 )}
               </div>

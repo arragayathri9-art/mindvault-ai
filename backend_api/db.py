@@ -209,6 +209,16 @@ def init_db():
             VALUES ('Onboard Marketing Leads', 'Setup training plans for onboarding marketing agents.', 'HR Operations', 'pending', 'low', '2026-07-25')
         """)
     
+    # Safe migrations for activity_log table
+    try:
+        cursor.execute("ALTER TABLE activity_log ADD COLUMN raw_query TEXT")
+    except sqlite3.OperationalError:
+        pass
+    try:
+        cursor.execute("ALTER TABLE activity_log ADD COLUMN team_id TEXT DEFAULT 'General'")
+    except sqlite3.OperationalError:
+        pass
+        
     conn.commit()
     conn.close()
 
@@ -465,17 +475,40 @@ def update_task(task_id, status):
     conn.close()
 
 # ACTIVITY LOG DB HELPERS
-def add_activity(activity_type, description, details=None):
+def add_activity(activity_type, description, details=None, raw_query=None, team_id="General"):
     conn = get_db_connection()
     cursor = conn.cursor()
     cursor.execute("""
-        INSERT INTO activity_log (activity_type, description, details)
-        VALUES (?, ?, ?)
-    """, (activity_type, description, details))
+        INSERT INTO activity_log (activity_type, description, details, raw_query, team_id)
+        VALUES (?, ?, ?, ?, ?)
+    """, (activity_type, description, details, raw_query, team_id))
     conn.commit()
     activity_id = cursor.lastrowid
     conn.close()
     return activity_id
+
+def get_user_query_history(team_id: str, limit: int = 10) -> list[dict]:
+    """
+    Returns the most recent queries for a given team, most recent first.
+    Reads from the existing activity log table — read-only, no schema change.
+    Return shape: [{"query": str, "timestamp": str}, ...]
+    """
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    try:
+        cursor.execute("""
+            SELECT raw_query, created_at 
+            FROM activity_log 
+            WHERE team_id = ? AND raw_query IS NOT NULL
+            ORDER BY created_at DESC 
+            LIMIT ?
+        """, (team_id, limit))
+        rows = cursor.fetchall()
+        return [{"query": row["raw_query"], "timestamp": row["created_at"]} for row in rows]
+    except sqlite3.OperationalError:
+        return []
+    finally:
+        conn.close()
 
 def get_activities(limit=50):
     conn = get_db_connection()

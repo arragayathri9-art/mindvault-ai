@@ -144,3 +144,182 @@ class FileExportGenerator:
         # Fallback plain text format
         text_content = f"{title}\n" + "="*len(title) + f"\n\n{content}"
         return text_content.encode("utf-8")
+
+    def generate_quotation(self, client_name: str, items: list[dict], terms: str) -> bytes:
+        """
+        items = [{"description": str, "qty": int, "rate": float}]
+        Produces a structured DOCX: header with client name + date,
+        a line-item table (description, qty, rate, line total),
+        subtotal, tax (assume 18% GST unless told otherwise), grand total,
+        and a terms & conditions footer. Use the same DOCX_AVAILABLE /
+        PDF_AVAILABLE fallback pattern already used in generate_docx().
+        """
+        import io
+        from datetime import datetime
+        out_io = io.BytesIO()
+        
+        if DOCX_AVAILABLE:
+            try:
+                doc = docx.Document()
+                doc.add_heading("Quotation", level=1)
+                
+                # Header with client name + date
+                doc.add_paragraph(f"Client Name: {client_name}")
+                doc.add_paragraph(f"Date: {datetime.now().strftime('%Y-%m-%d')}")
+                
+                # Add table (description, qty, rate, line total)
+                table = doc.add_table(rows=1, cols=4)
+                table.style = 'Table Grid'
+                hdr_cells = table.rows[0].cells
+                hdr_cells[0].text = 'Description'
+                hdr_cells[1].text = 'Qty'
+                hdr_cells[2].text = 'Rate'
+                hdr_cells[3].text = 'Line Total'
+                
+                subtotal = 0.0
+                for item in items:
+                    desc = item.get("description", "")
+                    qty = int(item.get("qty", 0))
+                    rate = float(item.get("rate", 0.0))
+                    line_total = qty * rate
+                    subtotal += line_total
+                    
+                    row_cells = table.add_row().cells
+                    row_cells[0].text = desc
+                    row_cells[1].text = str(qty)
+                    row_cells[2].text = f"${rate:.2f}"
+                    row_cells[3].text = f"${line_total:.2f}"
+                
+                tax = subtotal * 0.18
+                grand_total = subtotal + tax
+                
+                doc.add_paragraph(f"\nSubtotal: ${subtotal:.2f}")
+                doc.add_paragraph(f"GST (18%): ${tax:.2f}")
+                doc.add_paragraph(f"Grand Total: ${grand_total:.2f}")
+                
+                # Terms & conditions footer
+                doc.add_paragraph(f"\nTerms & Conditions:\n{terms}")
+                
+                doc.save(out_io)
+                out_io.seek(0)
+                return out_io.getvalue()
+            except Exception as e:
+                print(f"python-docx quotation generation failed: {e}. Falling back to text.")
+                
+        # Fallback raw text export
+        from datetime import datetime
+        subtotal = sum(int(item.get("qty", 0)) * float(item.get("rate", 0.0)) for item in items)
+        tax = subtotal * 0.18
+        grand_total = subtotal + tax
+        
+        text_content = (
+            f"QUOTATION\n"
+            f"Client Name: {client_name}\n"
+            f"Date: {datetime.now().strftime('%Y-%m-%d')}\n\n"
+            f"{'Description':<30}{'Qty':<6}{'Rate':<12}{'Total':<12}\n"
+            f"{'-'*60}\n"
+        )
+        for item in items:
+            desc = item.get("description", "")
+            qty = int(item.get("qty", 0))
+            rate = float(item.get("rate", 0.0))
+            total = qty * rate
+            text_content += f"{desc:<30}{qty:<6}${rate:<11.2f}${total:<11.2f}\n"
+            
+        text_content += (
+            f"{'-'*60}\n"
+            f"Subtotal: ${subtotal:.2f}\n"
+            f"GST (18%): ${tax:.2f}\n"
+            f"Grand Total: ${grand_total:.2f}\n\n"
+            f"Terms & Conditions:\n{terms}"
+        )
+        return text_content.encode("utf-8")
+
+    def generate_invoice(self, invoice_no: str, client_name: str, items: list[dict], due_date: str) -> bytes:
+        """
+        Same structure as generate_quotation but adds invoice number,
+        issue date, due date, and a payment status field (default "Unpaid").
+        """
+        import io
+        from datetime import datetime
+        out_io = io.BytesIO()
+        
+        if DOCX_AVAILABLE:
+            try:
+                doc = docx.Document()
+                doc.add_heading("Invoice", level=1)
+                
+                # Header info
+                doc.add_paragraph(f"Invoice Number: {invoice_no}")
+                doc.add_paragraph(f"Client Name: {client_name}")
+                doc.add_paragraph(f"Issue Date: {datetime.now().strftime('%Y-%m-%d')}")
+                doc.add_paragraph(f"Due Date: {due_date}")
+                doc.add_paragraph(f"Payment Status: Unpaid")
+                
+                # Add table (description, qty, rate, line total)
+                table = doc.add_table(rows=1, cols=4)
+                table.style = 'Table Grid'
+                hdr_cells = table.rows[0].cells
+                hdr_cells[0].text = 'Description'
+                hdr_cells[1].text = 'Qty'
+                hdr_cells[2].text = 'Rate'
+                hdr_cells[3].text = 'Line Total'
+                
+                subtotal = 0.0
+                for item in items:
+                    desc = item.get("description", "")
+                    qty = int(item.get("qty", 0))
+                    rate = float(item.get("rate", 0.0))
+                    line_total = qty * rate
+                    subtotal += line_total
+                    
+                    row_cells = table.add_row().cells
+                    row_cells[0].text = desc
+                    row_cells[1].text = str(qty)
+                    row_cells[2].text = f"${rate:.2f}"
+                    row_cells[3].text = f"${line_total:.2f}"
+                
+                tax = subtotal * 0.18
+                grand_total = subtotal + tax
+                
+                doc.add_paragraph(f"\nSubtotal: ${subtotal:.2f}")
+                doc.add_paragraph(f"GST (18%): ${tax:.2f}")
+                doc.add_paragraph(f"Grand Total: ${grand_total:.2f}")
+                
+                doc.save(out_io)
+                out_io.seek(0)
+                return out_io.getvalue()
+            except Exception as e:
+                print(f"python-docx invoice generation failed: {e}. Falling back to text.")
+                
+        # Fallback raw text export
+        from datetime import datetime
+        subtotal = sum(int(item.get("qty", 0)) * float(item.get("rate", 0.0)) for item in items)
+        tax = subtotal * 0.18
+        grand_total = subtotal + tax
+        
+        text_content = (
+            f"INVOICE\n"
+            f"Invoice Number: {invoice_no}\n"
+            f"Client Name: {client_name}\n"
+            f"Issue Date: {datetime.now().strftime('%Y-%m-%d')}\n"
+            f"Due Date: {due_date}\n"
+            f"Payment Status: Unpaid\n\n"
+            f"{'Description':<30}{'Qty':<6}{'Rate':<12}{'Total':<12}\n"
+            f"{'-'*60}\n"
+        )
+        for item in items:
+            desc = item.get("description", "")
+            qty = int(item.get("qty", 0))
+            rate = float(item.get("rate", 0.0))
+            total = qty * rate
+            text_content += f"{desc:<30}{qty:<6}${rate:<11.2f}${total:<11.2f}\n"
+            
+        text_content += (
+            f"{'-'*60}\n"
+            f"Subtotal: ${subtotal:.2f}\n"
+            f"GST (18%): ${tax:.2f}\n"
+            f"Grand Total: ${grand_total:.2f}\n"
+        )
+        return text_content.encode("utf-8")
+

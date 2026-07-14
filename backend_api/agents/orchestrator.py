@@ -1,4 +1,5 @@
 import json
+import os
 from groq import Groq
 from agents.knowledge_agent import KnowledgeAgent
 from agents.meeting_agent import MeetingAgent
@@ -7,12 +8,23 @@ from agents.report_agent import ReportAgent
 from agents.workflow_agent import WorkflowAgent
 from agents.risk_agent import RiskAgent
 from agents.recommendation_agent import RecommendationAgent
+from agents.support_agent import SupportAgent
 from utils.encoding_helper import sanitize_to_ascii
 
 class Orchestrator:
-    def __init__(self, data_dir, hr_docs_dir):
+    def __init__(self, data_dir, hr_docs_dir, support_docs_dir=None, support_data_dir=None):
         self.data_dir = data_dir
         self.hr_docs_dir = hr_docs_dir
+        
+        base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        if support_docs_dir is None:
+            support_docs_dir = os.path.join(base_dir, "support_docs")
+        if support_data_dir is None:
+            support_data_dir = os.path.join(base_dir, "support_data")
+            
+        self.support_docs_dir = support_docs_dir
+        self.support_data_dir = support_data_dir
+        
         self.knowledge_agent = KnowledgeAgent(data_dir, hr_docs_dir)
         self.meeting_agent = MeetingAgent(hr_docs_dir)
         self.email_agent = EmailAgent()
@@ -20,6 +32,7 @@ class Orchestrator:
         self.workflow_agent = WorkflowAgent()
         self.risk_agent = RiskAgent(hr_docs_dir)
         self.recommendation_agent = RecommendationAgent()
+        self.support_agent = SupportAgent(support_docs_dir, support_data_dir)
 
     def route_and_execute(self, query: str, api_key: str, team_id: str = "General") -> dict:
         """
@@ -33,12 +46,13 @@ class Orchestrator:
         classification_prompt = (
             "You are the central router for MindVault AI, an Autonomous Employee Copilot system.\n"
             "Analyze the user's input request and determine: "
-            "(1) The primary intent type (one of: 'knowledge', 'email', 'report', 'meeting', 'workflow', 'risk', 'coordinated').\n"
+            "(1) The primary intent type (one of: 'knowledge', 'email', 'report', 'meeting', 'workflow', 'risk', 'support', 'coordinated').\n"
+            "Choose 'support' for customer-facing questions about billing, accounts, refunds, shipping, tracking, or product troubleshooting issues (as opposed to 'knowledge' which is for internal employee/HR questions).\n"
             "(2) If 'coordinated', list the steps to execute (e.g. ['knowledge', 'email'] for 'find holiday policy and write an email about it').\n"
             "(3) Any extracted parameters (e.g., 'template_type', 'recipient', 'tone', 'report_type', 'situation', 'workflow_template').\n"
             "Return a JSON object with these exact keys:\n"
             "{\n"
-            "  \"intent\": \"knowledge\" | \"email\" | \"report\" | \"meeting\" | \"workflow\" | \"risk\" | \"coordinated\",\n"
+            "  \"intent\": \"knowledge\" | \"email\" | \"report\" | \"meeting\" | \"workflow\" | \"risk\" | \"support\" | \"coordinated\",\n"
             "  \"steps\": [\"step1\", \"step2\", ...],\n"
             "  \"params\": {\n"
             "     \"template_type\": \"...\",\n"
@@ -155,6 +169,19 @@ class Orchestrator:
                 "sources": [res.get("matched_filename")] if res.get("matched_filename") else [],
                 "experts": [],
                 "agent": "Risk Agent"
+            }
+
+        elif intent == "support":
+            res = self.support_agent.handle_query(query, api_key)
+            return {
+                "answer": res.get("answer", ""),
+                "confidence_score": res.get("confidence_score", 100),
+                "reasoning": f"Support Agent answered query. Category: {res.get('category')}. Escalated: {res.get('escalate')}",
+                "sources": res.get("sources", []),
+                "experts": [],
+                "agent": "Support Agent",
+                "category": res.get("category", "general"),
+                "escalate": res.get("escalate", False)
             }
 
         elif intent == "coordinated":

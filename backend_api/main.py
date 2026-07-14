@@ -5,6 +5,8 @@ React frontend. Reuses the existing retriever.py, reasoning.py, experts.py
 logic unchanged.
 """
 import os
+import sys
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 import pickle
 import json
 import tempfile
@@ -59,7 +61,12 @@ app.add_middleware(
 )
 
 retriever = Retriever(data_dir=DATA_DIR)
-orchestrator = Orchestrator(data_dir=DATA_DIR, hr_docs_dir=HR_DOCS_DIR)
+orchestrator = Orchestrator(
+    data_dir=DATA_DIR,
+    hr_docs_dir=HR_DOCS_DIR,
+    support_docs_dir=os.path.join(BASE_DIR, "support_docs"),
+    support_data_dir=os.path.join(BASE_DIR, "support_data")
+)
 export_generator = FileExportGenerator()
 
 # In-memory session state (preserved for backward-compatibility)
@@ -81,6 +88,8 @@ class AskResponse(BaseModel):
     reasoning: str
     sources: list[str]
     experts: list[str]
+    category: str | None = None
+    escalate: bool | None = None
 
 
 class RiskRequest(BaseModel):
@@ -206,7 +215,7 @@ def ask(request: AskRequest):
         res = orchestrator.route_and_execute(request.query, api_key, requested_team)
         
         # Log activity
-        db.add_activity("copilot_chat", f"Asked Copilot: '{request.query[:50]}...'", f"Agent: {res.get('agent', 'Orchestrator')}")
+        db.add_activity("copilot_query", f"Asked Copilot: '{request.query[:50]}...'", f"Agent: {res.get('agent', 'Orchestrator')}", raw_query=request.query, team_id=requested_team)
 
         # Programmatic log gap in backward-compatible state
         if res["confidence_score"] < 40:
@@ -221,6 +230,8 @@ def ask(request: AskRequest):
             reasoning=res["reasoning"],
             sources=res["sources"],
             experts=res["experts"],
+            category=res.get("category"),
+            escalate=res.get("escalate")
         )
     except Exception as e:
         import traceback
@@ -1064,6 +1075,75 @@ def api_generate_report(request: ReportGenRequest):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+class QuotationRequest(BaseModel):
+    client_name: str
+    items: list[dict]
+    terms: str
+    api_key: str | None = None
+
+class InvoiceRequest(BaseModel):
+    invoice_no: str
+    client_name: str
+    items: list[dict]
+    due_date: str
+    api_key: str | None = None
+
+class QuestionPaperRequest(BaseModel):
+    topic: str
+    difficulty: str
+    num_questions: int
+    api_key: str | None = None
+
+@app.post("/api/generate-quotation")
+@app.post("/generate-quotation")
+def api_generate_quotation(request: QuotationRequest):
+    try:
+        content = export_generator.generate_quotation(
+            client_name=request.client_name,
+            items=request.items,
+            terms=request.terms
+        )
+        return Response(
+            content=content,
+            media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            headers={"Content-Disposition": "attachment; filename=quotation.docx"}
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/generate-invoice")
+@app.post("/generate-invoice")
+def api_generate_invoice(request: InvoiceRequest):
+    try:
+        content = export_generator.generate_invoice(
+            invoice_no=request.invoice_no,
+            client_name=request.client_name,
+            items=request.items,
+            due_date=request.due_date
+        )
+        return Response(
+            content=content,
+            media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            headers={"Content-Disposition": "attachment; filename=invoice.docx"}
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/generate-question-paper")
+@app.post("/generate-question-paper")
+def api_generate_question_paper(request: QuestionPaperRequest):
+    api_key = _resolve_api_key(request.api_key)
+    try:
+        return orchestrator.report_agent.generate_question_paper(
+            topic=request.topic,
+            difficulty=request.difficulty,
+            num_questions=request.num_questions,
+            api_key=api_key
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 class MeetingSummaryRequest(BaseModel):
     transcript: str
     api_key: str | None = None
@@ -1141,17 +1221,21 @@ def api_workflow_reject(request: WorkflowRejectRequest):
 class RecommendationsRequest(BaseModel):
     query: str
     answer: str
+    team_id: str | None = "General"
     api_key: str | None = None
 
 @app.post("/api/recommendations")
 @app.post("/recommendations")
 def api_recommendations(request: RecommendationsRequest):
     api_key = _resolve_api_key(request.api_key)
+    team_id = request.team_id or "General"
     try:
+        history = db.get_user_query_history(team_id, limit=10)
         return orchestrator.recommendation_agent.generate_recommendations(
             query=request.query,
             answer=request.answer,
-            api_key=api_key
+            api_key=api_key,
+            history=history
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

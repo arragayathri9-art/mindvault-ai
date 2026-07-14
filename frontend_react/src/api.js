@@ -149,12 +149,12 @@ export async function getOnboardingProgress(role) {
 export async function transcribeMeeting(file, teamId = "General", apiKey) {
   const formData = new FormData();
   formData.append("file", file);
-  
+
   let url = `${API_BASE_URL}/api/meetings/transcribe?team_id=${encodeURIComponent(teamId)}`;
   if (apiKey) {
     url += `&api_key=${encodeURIComponent(apiKey)}`;
   }
-  
+
   const response = await axios.post(url, formData, {
     headers: {
       "Content-Type": "multipart/form-data",
@@ -178,6 +178,25 @@ export async function generateEmail(payload) {
 
 export async function generateReport(payload) {
   const response = await axios.post(`${API_BASE_URL}/api/generate-report`, payload);
+  return response.data;
+}
+
+export async function generateQuotation(payload) {
+  const response = await axios.post(`${API_BASE_URL}/api/generate-quotation`, payload, {
+    responseType: "blob"
+  });
+  return response.data;
+}
+
+export async function generateInvoice(payload) {
+  const response = await axios.post(`${API_BASE_URL}/api/generate-invoice`, payload, {
+    responseType: "blob"
+  });
+  return response.data;
+}
+
+export async function generateQuestionPaper(payload) {
+  const response = await axios.post(`${API_BASE_URL}/api/generate-question-paper`, payload);
   return response.data;
 }
 
@@ -208,11 +227,12 @@ export async function markNotificationRead(notifId) {
   return response.data;
 }
 
-export async function getRecommendations(query, answer, apiKey) {
+export async function getRecommendations(query, answer, apiKey, teamId = "General") {
   const response = await axios.post(`${API_BASE_URL}/api/recommendations`, {
     query,
     answer,
-    api_key: apiKey || null
+    api_key: apiKey || null,
+    team_id: teamId || "General"
   });
   return response.data;
 }

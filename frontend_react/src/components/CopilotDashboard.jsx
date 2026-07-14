@@ -106,7 +106,7 @@ export default function CopilotDashboard({ apiKey, selectedTeam, setActiveNav })
       setResult(data);
       
       // Load AI suggestions for next tasks and recommendations
-      const recData = await getRecommendations(query, data.answer, apiKey);
+      const recData = await getRecommendations(query, data.answer, apiKey, selectedTeam);
       setRecommendations(recData);
     } catch (err) {
       setError(err?.response?.data?.detail || "Something went wrong reaching the API.");

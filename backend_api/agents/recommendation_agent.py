@@ -6,7 +6,7 @@ class RecommendationAgent:
     def __init__(self):
         pass
 
-    def generate_recommendations(self, query: str, answer: str, api_key: str) -> dict:
+    def generate_recommendations(self, query: str, answer: str, api_key: str, history: list[dict] = None) -> dict:
         """
         Generates recommended next actions, documents, workflows, reports, emails, meetings.
         """
@@ -36,6 +36,9 @@ class RecommendationAgent:
             "}\n"
             "Limit lists to 2-3 highly relevant items each. Keep labels short (max 4 words)."
         )
+
+        if history:
+            system_prompt += f"\nHere are the user's last {len(history)} queries in this session: {history}. Use this pattern — not just the current single query — to produce more relevant, personalized suggestions."
 
         user_prompt = f"""
         User Query: {query}
