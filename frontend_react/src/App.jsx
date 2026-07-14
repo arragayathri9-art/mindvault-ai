@@ -71,7 +71,7 @@ export default function App() {
       {/* 1. Left Icon Rail (216px) */}
       <div
         style={{
-          width: "216px",
+          width: "240px",
           backgroundColor: themeColors.panelSurface,
           borderRight: `1px solid ${themeColors.borderDivider}`,
           display: "flex",
@@ -104,7 +104,7 @@ export default function App() {
           onClick={() => setActiveNav("chat")}
         >
           <Bot size={24} style={{ color: themeColors.highlightAmber }} />
-          <span>MindVault AI</span>
+          <span style={{ whiteSpace: "nowrap", fontSize: "1.2rem" }}>MindVault AI</span>
         </div>
 
         <div style={{ fontFamily: typography.mono.fontFamily, fontSize: "0.7rem", color: themeColors.textSecondary, textTransform: "uppercase", letterSpacing: "0.08em", padding: "0.5rem 1rem 0.25rem" }}>
@@ -137,7 +137,7 @@ export default function App() {
               }}
             >
               <IconComponent size={20} />
-              <span>{item.label}</span>
+              <span style={{ fontSize: "0.78rem" }}>{item.label}</span>
             </button>
           );
         })}
@@ -175,7 +175,7 @@ export default function App() {
               }}
             >
               <IconComponent size={20} style={{ color: item.id === "admin" && !isAdminUnlocked ? themeColors.confidenceLow : "inherit" }} />
-              <span>{item.label}</span>
+              <span style={{ fontSize: "0.78rem" }}>{item.label}</span>
             </button>
           );
         })}
@@ -184,7 +184,7 @@ export default function App() {
       {/* 2. Main Content Workspace */}
       <div
         style={{
-          marginLeft: "216px",
+          marginLeft: "240px",
           flex: 1,
           padding: "2.5rem",
           boxSizing: "border-box",
