@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { generateEmail } from "../api";
 import { cardStyle, buttonStyle, inputStyle, themeColors, typography, sectionLabelStyle } from "../styles";
+import EmptyState from "./EmptyState";
+import { Mail } from "lucide-react";
 
 const TEMPLATES = [
   "Leave Request",
@@ -107,7 +109,7 @@ export default function EmailGenerator({ apiKey }) {
                 style={{
                   ...inputStyle,
                   padding: "0.6rem 1rem",
-                  background: "#120B21"
+                  background: "#1A1A1A"
                 }}
               >
                 {TEMPLATES.map(t => (
@@ -141,7 +143,7 @@ export default function EmailGenerator({ apiKey }) {
                   style={{
                     ...inputStyle,
                     padding: "0.6rem 1rem",
-                    background: "#120B21"
+                    background: "#1A1A1A"
                   }}
                 >
                   {TONES.map(t => (
@@ -176,7 +178,15 @@ export default function EmailGenerator({ apiKey }) {
         </form>
       </div>
 
-      {result && (
+      {!result ? (
+        <div style={cardStyle}>
+          <EmptyState
+            icon={Mail}
+            title="No emails generated yet"
+            description="Generated email drafts will appear here once you fill out the details above."
+          />
+        </div>
+      ) : (
         <div style={cardStyle}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem", borderBottom: `1px solid ${themeColors.borderDivider}`, paddingBottom: "0.75rem" }}>
             <h3 style={{ ...typography.heading, fontSize: "1.3rem", margin: 0 }}>
@@ -186,7 +196,7 @@ export default function EmailGenerator({ apiKey }) {
               <button
                 onClick={handleCopy}
                 style={{
-                  background: "rgba(75, 63, 158, 0.25)",
+                  background: "rgba(201, 162, 39, 0.25)",
                   border: `1px solid ${themeColors.borderDivider}`,
                   borderRadius: "6px",
                   color: themeColors.textPrimary,
@@ -204,7 +214,7 @@ export default function EmailGenerator({ apiKey }) {
                   background: themeColors.highlightAmber,
                   border: "none",
                   borderRadius: "6px",
-                  color: "#150F26",
+                  color: themeColors.bgBase,
                   padding: "0.4rem 0.8rem",
                   cursor: "pointer",
                   fontSize: "0.8rem",
@@ -216,7 +226,7 @@ export default function EmailGenerator({ apiKey }) {
             </div>
           </div>
 
-          <div style={{ background: "#120B21", border: `1px solid ${themeColors.borderDivider}`, borderRadius: "10px", padding: "1.5rem" }}>
+          <div style={{ background: "#1A1A1A", border: `1px solid ${themeColors.borderDivider}`, borderRadius: "10px", padding: "1.5rem" }}>
             <p style={{ margin: "0 0 1rem 0", color: themeColors.highlightAmber, fontFamily: typography.mono.fontFamily, fontSize: "0.95rem" }}>
               <strong>Subject:</strong> {result.subject}
             </p>

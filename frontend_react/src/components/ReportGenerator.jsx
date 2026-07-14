@@ -209,7 +209,7 @@ export default function ReportGenerator({ apiKey }) {
               type="button"
               onClick={() => setDocumentType(type)}
               style={{
-                background: documentType === type ? "rgba(75, 63, 158, 0.25)" : "transparent",
+                background: documentType === type ? "rgba(201, 162, 39, 0.25)" : "transparent",
                 color: documentType === type ? themeColors.textPrimary : themeColors.textSecondary,
                 border: documentType === type ? `1px solid ${themeColors.accentPrimary}` : `1px solid ${themeColors.borderDivider}`,
                 borderRadius: "8px",
@@ -250,7 +250,7 @@ export default function ReportGenerator({ apiKey }) {
                     style={{
                       ...inputStyle,
                       padding: "0.6rem 1rem",
-                      background: "#120B21"
+                      background: "#1A1A1A"
                     }}
                   >
                     {REPORT_TYPES.map(r => (
@@ -461,7 +461,7 @@ export default function ReportGenerator({ apiKey }) {
                     style={{
                       ...inputStyle,
                       padding: "0.6rem 1rem",
-                      background: "#120B21"
+                      background: "#1A1A1A"
                     }}
                   >
                     <option value="Easy">Easy</option>
@@ -499,7 +499,7 @@ export default function ReportGenerator({ apiKey }) {
           <h3 style={{ ...typography.heading, fontSize: "1.3rem", marginTop: 0, marginBottom: "1rem", borderBottom: `1px solid ${themeColors.borderDivider}`, paddingBottom: "0.75rem" }}>
             Generated Document Preview: {result.title}
           </h3>
-          <div style={{ background: "#120B21", border: `1px solid ${themeColors.borderDivider}`, borderRadius: "10px", padding: "1.5rem", overflowX: "auto" }}>
+          <div style={{ background: "#1A1A1A", border: `1px solid ${themeColors.borderDivider}`, borderRadius: "10px", padding: "1.5rem", overflowX: "auto" }}>
             {/* Displaying markdown summary */}
             <div style={{ color: themeColors.textPrimary, lineHeight: 1.6, fontSize: "0.95rem", whiteSpace: "pre-wrap" }}>
               {result.content}
@@ -525,7 +525,7 @@ export default function ReportGenerator({ apiKey }) {
               <div
                 key={rep.id}
                 style={{
-                  background: "#120B21",
+                  background: "#1A1A1A",
                   border: `1px solid ${themeColors.borderDivider}`,
                   borderRadius: "8px",
                   padding: "0.8rem 1rem",
@@ -548,7 +548,7 @@ export default function ReportGenerator({ apiKey }) {
                     onClick={() => handleExport(rep.id, "docx")}
                     disabled={exportingFormat?.id === rep.id}
                     style={{
-                      background: "rgba(75, 63, 158, 0.25)",
+                      background: "rgba(201, 162, 39, 0.25)",
                       border: `1px solid ${themeColors.borderDivider}`,
                       borderRadius: "6px",
                       color: themeColors.textPrimary,
@@ -567,7 +567,7 @@ export default function ReportGenerator({ apiKey }) {
                       background: themeColors.highlightAmber,
                       border: "none",
                       borderRadius: "6px",
-                      color: "#150F26",
+                      color: themeColors.bgBase,
                       padding: "0.3rem 0.6rem",
                       cursor: "pointer",
                       fontSize: "0.75rem",

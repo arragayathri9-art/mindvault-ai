@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import axios from "axios";
 import { askMindVault, notifyExpert, generatePPT, getDashboard, createTask, updateTaskStatus, getRecommendations, markNotificationRead } from "../api";
+import { Search, Mail, FileText, Mic, FolderOpen, Zap, AlertTriangle, Lightbulb, CheckSquare, Activity } from "lucide-react";
 import {
   inputStyle, buttonStyle, linkButtonStyle, cardStyle,
   sectionLabelStyle, pillStyle, confidenceStyle, themeColors, typography
@@ -245,7 +246,7 @@ export default function CopilotDashboard({ apiKey, selectedTeam, setActiveNav })
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
       {/* 1. Header Banner & Quick Actions */}
-      <div style={{ ...cardStyle, marginTop: 0, padding: "1.5rem", background: `linear-gradient(135deg, ${themeColors.panelSurface} 0%, #150F26 100%)` }}>
+      <div style={{ ...cardStyle, marginTop: 0, padding: "1.5rem", background: `linear-gradient(135deg, ${themeColors.panelSurface} 0%, ${themeColors.bgBase} 100%)` }}>
         <h2 style={{ ...typography.heading, fontSize: "1.6rem", marginTop: 0, marginBottom: "0.25rem" }}>
           Welcome back Copilot,
         </h2>
@@ -256,47 +257,50 @@ export default function CopilotDashboard({ apiKey, selectedTeam, setActiveNav })
         {/* Quick Actions Grid */}
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(130px, 1fr))", gap: "0.75rem" }}>
           {[
-            { id: "search_knowledge", label: "Search Knowledge", icon: "🔍" },
-            { id: "generate_email", label: "Generate Email", icon: "📧" },
-            { id: "generate_report", label: "Generate Report", icon: "📝" },
-            { id: "meeting_summary", label: "Meeting Summary", icon: "🎤" },
-            { id: "upload_document", label: "Upload Document", icon: "📁" },
-            { id: "start_workflow", label: "Start Workflow", icon: "⚡" },
-            { id: "risk_analysis", label: "Risk Analysis", icon: "⚠️" },
-            { id: "generate_ppt", label: "Generate PPT", icon: "🖥️" },
-            { id: "view_tasks", label: "View Tasks", icon: "✓" },
-            { id: "recent_activities", label: "Activities", icon: "📑" }
-          ].map((act) => (
-            <button
-              key={act.id}
-              onClick={() => handleQuickAction(act.id)}
-              style={{
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "center",
-                justifyContent: "center",
-                padding: "0.75rem",
-                borderRadius: "10px",
-                background: "rgba(75, 63, 158, 0.15)",
-                border: `1px solid ${themeColors.borderDivider}`,
-                color: themeColors.textPrimary,
-                cursor: "pointer",
-                transition: "all 0.2s",
-                gap: "0.4rem"
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.borderColor = themeColors.highlightAmber;
-                e.currentTarget.style.transform = "translateY(-2px)";
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.borderColor = themeColors.borderDivider;
-                e.currentTarget.style.transform = "none";
-              }}
-            >
-              <span style={{ fontSize: "1.5rem" }}>{act.icon}</span>
-              <span style={{ fontSize: "0.75rem", fontWeight: 600, textAlign: "center" }}>{act.label}</span>
-            </button>
-          ))}
+            { id: "search_knowledge", label: "Search Knowledge", icon: Search },
+            { id: "generate_email", label: "Generate Email", icon: Mail },
+            { id: "generate_report", label: "Generate Report", icon: FileText },
+            { id: "meeting_summary", label: "Meeting Summary", icon: Mic },
+            { id: "upload_document", label: "Upload Document", icon: FolderOpen },
+            { id: "start_workflow", label: "Start Workflow", icon: Zap },
+            { id: "risk_analysis", label: "Risk Analysis", icon: AlertTriangle },
+            { id: "generate_ppt", label: "Generate PPT", icon: Lightbulb },
+            { id: "view_tasks", label: "View Tasks", icon: CheckSquare },
+            { id: "recent_activities", label: "Activities", icon: Activity }
+          ].map((act) => {
+            const ActionIcon = act.icon;
+            return (
+              <button
+                key={act.id}
+                onClick={() => handleQuickAction(act.id)}
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  padding: "0.75rem",
+                  borderRadius: "10px",
+                  background: "rgba(201, 162, 39, 0.15)",
+                  border: `1px solid ${themeColors.borderDivider}`,
+                  color: themeColors.textPrimary,
+                  cursor: "pointer",
+                  transition: "all 0.2s",
+                  gap: "0.5rem"
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.borderColor = themeColors.highlightAmber;
+                  e.currentTarget.style.transform = "translateY(-2px)";
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.borderColor = themeColors.borderDivider;
+                  e.currentTarget.style.transform = "none";
+                }}
+              >
+                <ActionIcon size={24} style={{ color: themeColors.highlightAmber }} />
+                <span style={{ fontSize: "0.75rem", fontWeight: 600, textAlign: "center" }}>{act.label}</span>
+              </button>
+            );
+          })}
         </div>
       </div>
 
@@ -464,13 +468,13 @@ export default function CopilotDashboard({ apiKey, selectedTeam, setActiveNav })
                         const status = notifiedExperts[e];
                         return (
                           <div key={i} style={{ display: "flex", alignItems: "center", flexWrap: "wrap", gap: "0.5rem" }}>
-                            <span style={{ ...pillStyle, color: themeColors.highlightAmber, background: "rgba(240, 167, 66, 0.1)", fontSize: "0.75rem" }}>👤 {e}</span>
+                            <span style={{ ...pillStyle, color: themeColors.highlightAmber, background: "rgba(201, 162, 39, 0.1)", fontSize: "0.75rem" }}>👤 {e}</span>
                             {(!status || status.status === "error") && (
                               <button
                                 type="button"
                                 onClick={() => handleNotifyExpert(e)}
                                 style={{
-                                  background: "rgba(75, 63, 158, 0.15)",
+                                  background: "rgba(201, 162, 39, 0.15)",
                                   border: `1px solid ${themeColors.borderDivider}`,
                                   borderRadius: "4px",
                                   color: themeColors.textPrimary,
@@ -511,7 +515,7 @@ export default function CopilotDashboard({ apiKey, selectedTeam, setActiveNav })
                       key={i}
                       onClick={() => handleTaskSuggestion(act)}
                       style={{
-                        background: "rgba(240, 167, 66, 0.1)",
+                        background: "rgba(201, 162, 39, 0.1)",
                         border: `1px solid ${themeColors.highlightAmber}44`,
                         color: themeColors.highlightAmber,
                         borderRadius: "8px",
@@ -521,8 +525,8 @@ export default function CopilotDashboard({ apiKey, selectedTeam, setActiveNav })
                         fontWeight: 600,
                         transition: "all 0.2s"
                       }}
-                      onMouseEnter={(e) => e.currentTarget.style.background = "rgba(240, 167, 66, 0.2)"}
-                      onMouseLeave={(e) => e.currentTarget.style.background = "rgba(240, 167, 66, 0.1)"}
+                      onMouseEnter={(e) => e.currentTarget.style.background = "rgba(201, 162, 39, 0.2)"}
+                      onMouseLeave={(e) => e.currentTarget.style.background = "rgba(201, 162, 39, 0.1)"}
                     >
                       🚀 {act}
                     </button>
@@ -574,7 +578,7 @@ export default function CopilotDashboard({ apiKey, selectedTeam, setActiveNav })
                   <div style={{ fontSize: "0.75rem", color: themeColors.textSecondary, fontWeight: "bold", marginBottom: "0.4rem" }}>Generated Emails</div>
                   <div style={{ display: "flex", flexDirection: "column", gap: "0.3rem" }}>
                     {memory.recent_emails?.slice(0, 3).map((e) => (
-                      <div key={e.id} onClick={() => setActiveNav("emails")} style={{ fontSize: "0.8rem", background: "#120B21", border: `1px solid ${themeColors.borderDivider}`, padding: "0.4rem", borderRadius: "6px", cursor: "pointer" }}>
+                      <div key={e.id} onClick={() => setActiveNav("emails")} style={{ fontSize: "0.8rem", background: "#1A1A1A", border: `1px solid ${themeColors.borderDivider}`, padding: "0.4rem", borderRadius: "6px", cursor: "pointer" }}>
                         📧 {e.subject.slice(0, 20)}...
                       </div>
                     ))}
@@ -585,7 +589,7 @@ export default function CopilotDashboard({ apiKey, selectedTeam, setActiveNav })
                   <div style={{ fontSize: "0.75rem", color: themeColors.textSecondary, fontWeight: "bold", marginBottom: "0.4rem" }}>Meeting Summaries</div>
                   <div style={{ display: "flex", flexDirection: "column", gap: "0.3rem" }}>
                     {memory.recent_meetings?.slice(0, 3).map((m) => (
-                      <div key={m.id} onClick={() => setActiveNav("meetings")} style={{ fontSize: "0.8rem", background: "#120B21", border: `1px solid ${themeColors.borderDivider}`, padding: "0.4rem", borderRadius: "6px", cursor: "pointer" }}>
+                      <div key={m.id} onClick={() => setActiveNav("meetings")} style={{ fontSize: "0.8rem", background: "#1A1A1A", border: `1px solid ${themeColors.borderDivider}`, padding: "0.4rem", borderRadius: "6px", cursor: "pointer" }}>
                         🎙️ {m.filename.slice(0, 20)}...
                       </div>
                     ))}
@@ -596,7 +600,7 @@ export default function CopilotDashboard({ apiKey, selectedTeam, setActiveNav })
                   <div style={{ fontSize: "0.75rem", color: themeColors.textSecondary, fontWeight: "bold", marginBottom: "0.4rem" }}>Active Workflows</div>
                   <div style={{ display: "flex", flexDirection: "column", gap: "0.3rem" }}>
                     {memory.recent_workflows?.slice(0, 3).map((w) => (
-                      <div key={w.id} onClick={() => setActiveNav("workflows")} style={{ fontSize: "0.8rem", background: "#120B21", border: `1px solid ${themeColors.borderDivider}`, padding: "0.4rem", borderRadius: "6px", cursor: "pointer" }}>
+                      <div key={w.id} onClick={() => setActiveNav("workflows")} style={{ fontSize: "0.8rem", background: "#1A1A1A", border: `1px solid ${themeColors.borderDivider}`, padding: "0.4rem", borderRadius: "6px", cursor: "pointer" }}>
                         ⚡ {w.template_name} - {w.status}
                       </div>
                     ))}
@@ -616,7 +620,7 @@ export default function CopilotDashboard({ apiKey, selectedTeam, setActiveNav })
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
               <div style={sectionLabelStyle}>ALERTS</div>
               {unreadNotifCount > 0 && (
-                <span style={{ ...pillStyle, color: "#150F26", background: themeColors.highlightAmber, fontWeight: "bold" }}>
+                <span style={{ ...pillStyle, color: themeColors.bgBase, background: themeColors.highlightAmber, fontWeight: "bold" }}>
                   {unreadNotifCount} New
                 </span>
               )}
@@ -634,7 +638,7 @@ export default function CopilotDashboard({ apiKey, selectedTeam, setActiveNav })
                   <div
                     key={notif.id}
                     style={{
-                      background: notif.status === "unread" ? "rgba(75, 63, 158, 0.15)" : "#120B21",
+                      background: notif.status === "unread" ? "rgba(201, 162, 39, 0.15)" : "#1A1A1A",
                       border: `1px solid ${notif.status === "unread" ? themeColors.highlightAmber : themeColors.borderDivider}`,
                       borderRadius: "8px",
                       padding: "0.6rem 0.8rem",
@@ -693,11 +697,11 @@ export default function CopilotDashboard({ apiKey, selectedTeam, setActiveNav })
             </h3>
 
             {showTaskForm && (
-              <form onSubmit={handleCreateTask} style={{ display: "flex", flexDirection: "column", gap: "0.5rem", marginBottom: "1rem", background: "#120B21", padding: "0.75rem", borderRadius: "8px", border: `1px solid ${themeColors.borderDivider}` }}>
+              <form onSubmit={handleCreateTask} style={{ display: "flex", flexDirection: "column", gap: "0.5rem", marginBottom: "1rem", background: "#1A1A1A", padding: "0.75rem", borderRadius: "8px", border: `1px solid ${themeColors.borderDivider}` }}>
                 <input type="text" placeholder="Task title..." value={taskTitle} onChange={(e) => setTaskTitle(e.target.value)} style={{ ...inputStyle, padding: "0.4rem 0.6rem", fontSize: "0.85rem" }} required />
                 <input type="text" placeholder="Description..." value={taskDesc} onChange={(e) => setTaskDesc(e.target.value)} style={{ ...inputStyle, padding: "0.4rem 0.6rem", fontSize: "0.85rem" }} />
                 <div style={{ display: "flex", gap: "0.4rem" }}>
-                  <select value={taskPriority} onChange={(e) => setTaskPriority(e.target.value)} style={{ ...inputStyle, padding: "0.4rem 0.6rem", fontSize: "0.85rem", background: "#1C1638", flex: 1 }}>
+                  <select value={taskPriority} onChange={(e) => setTaskPriority(e.target.value)} style={{ ...inputStyle, padding: "0.4rem 0.6rem", fontSize: "0.85rem", background: "#1A1A1A", flex: 1 }}>
                     <option value="low">Low Priority</option>
                     <option value="medium">Medium Priority</option>
                     <option value="high">High Priority</option>
@@ -718,7 +722,7 @@ export default function CopilotDashboard({ apiKey, selectedTeam, setActiveNav })
                     <div
                       key={task.id}
                       style={{
-                        background: "#120B21",
+                        background: "#1A1A1A",
                         border: `1px solid ${isDone ? "rgba(52,211,153,0.2)" : themeColors.borderDivider}`,
                         borderRadius: "8px",
                         padding: "0.6rem 0.8rem",

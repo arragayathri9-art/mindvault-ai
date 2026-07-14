@@ -205,7 +205,7 @@ export default function AskTab({ apiKey, selectedTeam }) {
             <div
               style={{
                 ...cardStyle,
-                borderColor: isNoDocsIndexed ? "rgba(75, 63, 158, 0.5)" : "#f8717155",
+                borderColor: isNoDocsIndexed ? "rgba(201, 162, 39, 0.5)" : "#f8717155",
                 color: isNoDocsIndexed ? themeColors.textPrimary : "#f87171",
               }}
             >
@@ -296,7 +296,7 @@ export default function AskTab({ apiKey, selectedTeam }) {
                   const status = notifiedExperts[e];
                   return (
                     <div key={i} style={{ display: "flex", alignItems: "center", flexWrap: "wrap", gap: "0.5rem" }}>
-                      <span style={{ ...pillStyle, color: themeColors.highlightAmber, background: "rgba(240, 167, 66, 0.1)" }}>👤 {e}</span>
+                      <span style={{ ...pillStyle, color: themeColors.highlightAmber, background: "rgba(201, 162, 39, 0.1)" }}>👤 {e}</span>
                       
                       {(!status || status.status === "error") && (
                         <button
@@ -304,7 +304,7 @@ export default function AskTab({ apiKey, selectedTeam }) {
                           onClick={() => handleNotifyExpert(e)}
                           disabled={status?.status === "sending"}
                           style={{
-                            background: "rgba(75, 63, 158, 0.15)",
+                            background: "rgba(201, 162, 39, 0.15)",
                             border: `1px solid ${themeColors.borderDivider}`,
                             borderRadius: "6px",
                             color: themeColors.textPrimary,

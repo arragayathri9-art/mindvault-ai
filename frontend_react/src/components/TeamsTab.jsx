@@ -99,7 +99,7 @@ export default function TeamsTab({ selectedTeam, setSelectedTeam }) {
                 key={t}
                 onClick={() => setSelectedTeam(t)}
                 style={{
-                  background: isSelected ? "rgba(75, 63, 158, 0.25)" : "#120B21",
+                  background: isSelected ? "rgba(201, 162, 39, 0.25)" : "#1A1A1A",
                   border: `2px solid ${isSelected ? themeColors.highlightAmber : themeColors.borderDivider}`,
                   borderRadius: "10px",
                   padding: "1rem 1.25rem",

@@ -2,6 +2,8 @@ import { useState, useEffect, useRef } from "react";
 import axios from "axios";
 import { transcribeMeeting, listMeetings, getTeams } from "../api";
 import { cardStyle, buttonStyle, inputStyle, themeColors, typography, sectionLabelStyle, pillStyle } from "../styles";
+import EmptyState from "./EmptyState";
+import { Mic } from "lucide-react";
 
 export default function MeetingsTab({ apiKey, selectedTeam, onUploadSuccess }) {
   const [meetings, setMeetings] = useState([]);
@@ -188,7 +190,7 @@ export default function MeetingsTab({ apiKey, selectedTeam, onUploadSuccess }) {
             style={{
               padding: "0.5rem 0.75rem",
               borderRadius: "8px",
-              background: "#120B21",
+              background: "#1A1A1A",
               color: themeColors.textPrimary,
               border: `1px solid ${themeColors.borderDivider}`,
               outline: "none",
@@ -205,7 +207,7 @@ export default function MeetingsTab({ apiKey, selectedTeam, onUploadSuccess }) {
           <div style={{ flex: "1 1 300px", paddingRight: "2.5rem" }}>
             <h4 style={sectionLabelStyle}>Option A: Live Recording</h4>
             
-            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "1.5rem", background: "#120B21", borderRadius: "12px", border: `1px solid ${themeColors.borderDivider}` }}>
+            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "1.5rem", background: "#1A1A1A", borderRadius: "12px", border: `1px solid ${themeColors.borderDivider}` }}>
               {recording ? (
                 <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "0.5rem" }}>
                   <div
@@ -259,7 +261,7 @@ export default function MeetingsTab({ apiKey, selectedTeam, onUploadSuccess }) {
                             marginTop: 0,
                             padding: "0.4rem 1rem",
                             background: themeColors.highlightAmber,
-                            color: "#150F26"
+                            color: themeColors.bgBase
                           }}
                         >
                           {loading ? "Transcribing..." : "Transcribe Now"}
@@ -295,7 +297,7 @@ export default function MeetingsTab({ apiKey, selectedTeam, onUploadSuccess }) {
                 style={{
                   ...inputStyle,
                   padding: "0.5rem",
-                  background: "#120B21",
+                  background: "#1A1A1A",
                   border: `1px solid ${themeColors.borderDivider}`
                 }}
                 required
@@ -377,7 +379,7 @@ export default function MeetingsTab({ apiKey, selectedTeam, onUploadSuccess }) {
                     color: themeColors.textSecondary,
                     fontSize: "0.85rem",
                     lineHeight: 1.5,
-                    background: "#120B21",
+                    background: "#1A1A1A",
                     padding: "1rem",
                     borderRadius: "8px",
                     marginTop: "0.5rem",
@@ -406,7 +408,11 @@ export default function MeetingsTab({ apiKey, selectedTeam, onUploadSuccess }) {
         {loading && meetings.length === 0 ? (
           <p style={{ color: themeColors.textSecondary, fontStyle: "italic" }}>Loading history...</p>
         ) : meetings.length === 0 ? (
-          <p style={{ color: themeColors.textSecondary, fontStyle: "italic" }}>No meeting recordings indexed yet.</p>
+          <EmptyState
+            icon={Mic}
+            title="No meeting recordings indexed yet"
+            description="Record or upload audio meetings to transcribe and extract action tasks."
+          />
         ) : (
           <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem", maxHeight: "350px", overflowY: "auto" }}>
             {meetings.map((m) => (
@@ -414,7 +420,7 @@ export default function MeetingsTab({ apiKey, selectedTeam, onUploadSuccess }) {
                 key={m.id}
                 onClick={() => setSelectedMeeting(m)}
                 style={{
-                  background: "#120B21",
+                  background: "#1A1A1A",
                   border: `1px solid ${selectedMeeting?.id === m.id ? themeColors.highlightAmber : themeColors.borderDivider}`,
                   borderRadius: "8px",
                   padding: "0.8rem 1rem",

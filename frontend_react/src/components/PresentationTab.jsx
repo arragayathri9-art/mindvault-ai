@@ -118,7 +118,7 @@ export default function PresentationTab({ apiKey }) {
           disabled={loadingMode !== null}
           style={{
             ...buttonStyle,
-            background: `linear-gradient(135deg, ${themeColors.accentPrimary} 0%, #312680 100%)`,
+            background: `linear-gradient(135deg, ${themeColors.accentPrimary} 0%, #7A5B0B 100%)`,
             opacity: loadingMode !== null ? 0.6 : 1,
             cursor: loadingMode !== null ? "not-allowed" : "pointer",
             width: "100%",

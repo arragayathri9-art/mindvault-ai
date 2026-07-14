@@ -187,7 +187,7 @@ export default function AdminDashboard() {
             key={sub.id}
             onClick={() => setSubTab(sub.id)}
             style={{
-              background: subTab === sub.id ? "rgba(75, 63, 158, 0.25)" : "transparent",
+              background: subTab === sub.id ? "rgba(201, 162, 39, 0.12)" : "transparent",
               color: subTab === sub.id ? themeColors.textPrimary : themeColors.textSecondary,
               border: "none",
               borderRadius: "8px",
@@ -255,7 +255,7 @@ export default function AdminDashboard() {
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", height: "150px", padding: "0 1rem" }}>
                 {analytics.daily_activity.map(d => (
                   <div key={d.date} style={{ display: "flex", flexDirection: "column", alignItems: "center", width: "10%" }}>
-                    <div style={{ width: "100%", height: `${d.queries * 4}px`, background: `linear-gradient(to top, ${themeColors.accentPrimary}, ${themeColors.highlightAmber})`, borderRadius: "4px" }} />
+                    <div style={{ width: "100%", height: `${d.queries * 4}px`, background: "linear-gradient(180deg, #C9A227 0%, #232323 100%)", borderRadius: "4px" }} />
                     <span style={{ fontSize: "0.75rem", color: themeColors.textSecondary, marginTop: "0.4rem" }}>{d.date}</span>
                   </div>
                 ))}
@@ -267,7 +267,7 @@ export default function AdminDashboard() {
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", height: "150px", padding: "0 1rem" }}>
                 {analytics.monthly_activity.map(m => (
                   <div key={m.month} style={{ display: "flex", flexDirection: "column", alignItems: "center", width: "12%" }}>
-                    <div style={{ width: "100%", height: `${m.saved * 1.2}px`, background: `linear-gradient(to top, #34D399, ${themeColors.accentPrimary})`, borderRadius: "4px" }} />
+                    <div style={{ width: "100%", height: `${m.saved * 1.2}px`, background: "linear-gradient(180deg, #C9A227 0%, #232323 100%)", borderRadius: "4px" }} />
                     <span style={{ fontSize: "0.75rem", color: themeColors.textSecondary, marginTop: "0.4rem" }}>{m.month}</span>
                   </div>
                 ))}
@@ -294,7 +294,7 @@ export default function AdminDashboard() {
               </div>
               <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: "0.2rem" }}>
                 <span style={{ fontSize: "0.7rem", color: themeColors.textSecondary }}>Team</span>
-                <select value={newUserTeam} onChange={e => setNewUserTeam(e.target.value)} style={{ ...inputStyle, padding: "0.4rem 0.8rem", fontSize: "0.85rem", background: "#120B21" }}>
+                <select value={newUserTeam} onChange={e => setNewUserTeam(e.target.value)} style={{ ...inputStyle, padding: "0.4rem 0.8rem", fontSize: "0.85rem", background: "#1A1A1A" }}>
                   {teams.map(t => (
                     <option key={t} value={t}>{t}</option>
                   ))}
@@ -305,7 +305,7 @@ export default function AdminDashboard() {
 
             <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
               {users.map(u => (
-                <div key={u.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", background: "#120B21", border: `1px solid ${themeColors.borderDivider}`, borderRadius: "8px", padding: "0.6rem 0.8rem" }}>
+                <div key={u.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", background: "#1A1A1A", border: `1px solid ${themeColors.borderDivider}`, borderRadius: "8px", padding: "0.6rem 0.8rem" }}>
                   <div>
                     <div style={{ fontWeight: 600, fontSize: "0.95rem" }}>{u.name}</div>
                     <div style={{ fontSize: "0.8rem", color: themeColors.textSecondary }}>{u.role} | Team: <code style={{ fontFamily: typography.mono.fontFamily }}>{u.team}</code></div>
@@ -328,7 +328,7 @@ export default function AdminDashboard() {
 
             <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem" }}>
               {teams.map(t => (
-                <span key={t} style={{ ...pillStyle, color: themeColors.highlightAmber, background: "rgba(240, 167, 66, 0.1)", border: `1px solid ${themeColors.highlightAmber}44`, fontSize: "0.85rem", padding: "0.4rem 0.8rem" }}>👥 {t}</span>
+                <span key={t} style={{ ...pillStyle, color: themeColors.highlightAmber, background: "rgba(201, 162, 39, 0.1)", border: `1px solid ${themeColors.highlightAmber}44`, fontSize: "0.85rem", padding: "0.4rem 0.8rem" }}>👥 {t}</span>
               ))}
             </div>
           </div>
@@ -341,7 +341,7 @@ export default function AdminDashboard() {
           <h3 style={{ ...typography.heading, fontSize: "1.3rem", marginTop: 0, marginBottom: "1rem" }}>Manage Indexed Documents</h3>
           <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem", maxHeight: "400px", overflowY: "auto" }}>
             {docs.map(d => (
-              <div key={d.filename} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", background: "#120B21", border: `1px solid ${themeColors.borderDivider}`, borderRadius: "8px", padding: "0.8rem 1rem" }}>
+              <div key={d.filename} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", background: "#1A1A1A", border: `1px solid ${themeColors.borderDivider}`, borderRadius: "8px", padding: "0.8rem 1rem" }}>
                 <div>
                   <div style={{ fontWeight: 600 }}>📄 {d.filename}</div>
                   <div style={{ fontSize: "0.8rem", color: themeColors.textSecondary, marginTop: "0.25rem" }}>Chunks: {d.chunk_count} | Size: {(d.size_bytes / 1024).toFixed(1)} KB</div>
@@ -353,7 +353,7 @@ export default function AdminDashboard() {
                     <select
                       value={docTeamMap[d.filename] || "General"}
                       onChange={(e) => handleDocTeamChange(d.filename, e.target.value)}
-                      style={{ padding: "0.3rem 0.5rem", borderRadius: "6px", background: "#1C1638", color: themeColors.textPrimary, border: `1px solid ${themeColors.borderDivider}` }}
+                      style={{ padding: "0.3rem 0.5rem", borderRadius: "6px", background: "#1A1A1A", color: themeColors.textPrimary, border: `1px solid ${themeColors.borderDivider}` }}
                     >
                       {teams.map(t => (
                         <option key={t} value={t}>{t}</option>
@@ -375,7 +375,7 @@ export default function AdminDashboard() {
           <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem", maxWidth: "500px" }}>
             <div style={{ display: "flex", flexDirection: "column", gap: "0.4rem" }}>
               <label style={{ fontSize: "0.8rem", color: themeColors.textSecondary }}>Primary LLM Model (Reasoning & Orchestrator)</label>
-              <select value={activeModel} onChange={e => setActiveModel(e.target.value)} style={{ ...inputStyle, padding: "0.6rem 1rem", background: "#120B21" }}>
+              <select value={activeModel} onChange={e => setActiveModel(e.target.value)} style={{ ...inputStyle, padding: "0.6rem 1rem", background: "#1A1A1A" }}>
                 <option value="llama-3.3-70b-versatile">Llama 3.3 70B Versatile (Production Default)</option>
                 <option value="llama-3.1-8b-instant">Llama 3.1 8B Instant (Fast response)</option>
                 <option value="mixtral-8x7b-32768">Mixtral 8x7B (Complex pipelines)</option>
@@ -384,7 +384,7 @@ export default function AdminDashboard() {
 
             <div style={{ display: "flex", flexDirection: "column", gap: "0.4rem" }}>
               <label style={{ fontSize: "0.8rem", color: themeColors.textSecondary }}>Voice-to-Text Model (Meetings)</label>
-              <select disabled style={{ ...inputStyle, padding: "0.6rem 1rem", background: "#120B21", opacity: 0.7 }}>
+              <select disabled style={{ ...inputStyle, padding: "0.6rem 1rem", background: "#1A1A1A", opacity: 0.7 }}>
                 <option value="whisper-large-v3">Whisper Large v3 (Multilingual support)</option>
               </select>
             </div>
@@ -410,7 +410,7 @@ export default function AdminDashboard() {
 
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: "1rem" }}>
             {AGENT_LIST.map(agent => (
-              <div key={agent.id} style={{ background: "#120B21", border: `1px solid ${themeColors.borderDivider}`, borderRadius: "10px", padding: "1.25rem", display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
+              <div key={agent.id} style={{ background: "#1A1A1A", border: `1px solid ${themeColors.borderDivider}`, borderRadius: "10px", padding: "1.25rem", display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
                 <div>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.5rem" }}>
                     <span style={{ fontWeight: 600, color: themeColors.textPrimary }}>{agent.name}</span>
@@ -439,7 +439,7 @@ export default function AdminDashboard() {
             <h3 style={{ ...typography.heading, fontSize: "1.3rem", marginTop: 0, marginBottom: "0.5rem" }}>Copilot Action Stream (Database logs)</h3>
             <p style={{ color: themeColors.textSecondary, fontSize: "0.85rem", margin: "0 0 1.25rem 0" }}>Real-time audit log of agent triggers, tool outputs, document updates, and email/report creations.</p>
 
-            <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem", maxHeight: "350px", overflowY: "auto", background: "#120B21", borderRadius: "10px", padding: "1rem", border: `1px solid ${themeColors.borderDivider}` }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem", maxHeight: "350px", overflowY: "auto", background: "#1A1A1A", borderRadius: "10px", padding: "1rem", border: `1px solid ${themeColors.borderDivider}` }}>
               {activities.map((act) => (
                 <div key={act.id} style={{ borderBottom: `1px solid ${themeColors.borderDivider}`, paddingBottom: "0.5rem", marginBottom: "0.5rem", fontSize: "0.85rem" }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>

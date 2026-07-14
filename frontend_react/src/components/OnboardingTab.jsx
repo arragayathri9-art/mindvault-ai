@@ -86,7 +86,7 @@ export default function OnboardingTab({ apiKey }) {
           style={{
             padding: "0.6rem 1rem",
             borderRadius: "10px",
-            background: "#120B21",
+            background: "#1A1A1A",
             color: themeColors.textPrimary,
             border: `1px solid ${themeColors.borderDivider}`,
             outline: "none",
@@ -142,7 +142,7 @@ export default function OnboardingTab({ apiKey }) {
                 <div
                   key={sug.filename}
                   style={{
-                    background: "#120B21",
+                    background: "#1A1A1A",
                     border: `1px solid ${isRead ? "rgba(52, 211, 153, 0.25)" : themeColors.borderDivider}`,
                     borderRadius: "10px",
                     padding: "1.25rem",
@@ -189,8 +189,8 @@ export default function OnboardingTab({ apiKey }) {
                     onClick={() => handleMarkAsRead(sug.filename)}
                     style={{
                       flexShrink: 0,
-                      background: isRead ? "rgba(255, 255, 255, 0.03)" : "rgba(75, 63, 158, 0.25)",
-                      border: `1px solid ${isRead ? themeColors.borderDivider : "rgba(75, 63, 158, 0.5)"}`,
+                      background: isRead ? "rgba(255, 255, 255, 0.03)" : "rgba(201, 162, 39, 0.25)",
+                      border: `1px solid ${isRead ? themeColors.borderDivider : "rgba(201, 162, 39, 0.5)"}`,
                       color: isRead ? themeColors.textSecondary : themeColors.textPrimary,
                       padding: "0.4rem 0.8rem",
                       borderRadius: "6px",

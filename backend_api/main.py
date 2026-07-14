@@ -1478,6 +1478,17 @@ def api_export_meeting(meeting_id: int, format: str = "docx"):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+class PinRequest(BaseModel):
+    pin: str
+
+@app.post("/api/admin/verify-pin")
+@app.post("/admin/verify-pin")
+def verify_admin_pin(request: PinRequest):
+    if request.pin == "1234":
+        return {"status": "success", "token": "admin-session-token-abc"}
+    raise HTTPException(status_code=400, detail="Invalid PIN code.")
+
+
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 

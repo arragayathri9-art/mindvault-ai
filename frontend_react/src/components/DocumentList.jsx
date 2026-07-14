@@ -230,7 +230,7 @@ export default function DocumentList({ refreshTrigger }) {
               No documents currently indexed.
             </p>
           ) : (
-            <div style={{ display: "flex", flexDirection: "column", maxHeight: "400px", overflowY: "auto", paddingRight: "0.25rem" }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem", maxHeight: "400px", overflowY: "auto", paddingRight: "0.25rem" }}>
               {documents.map((doc) => (
                 <div
                   key={doc.filename}
@@ -238,8 +238,10 @@ export default function DocumentList({ refreshTrigger }) {
                     display: "flex",
                     justifyContent: "space-between",
                     alignItems: "center",
-                    padding: "1rem 0",
-                    borderBottom: `1px solid ${themeColors.borderDivider}`,
+                    padding: "1rem",
+                    background: themeColors.panelSurfaceRaised,
+                    border: `1px solid ${themeColors.borderDivider}`,
+                    borderRadius: "8px",
                     flexWrap: "wrap",
                     gap: "1rem"
                   }}
@@ -253,7 +255,7 @@ export default function DocumentList({ refreshTrigger }) {
                       {/* Show current team badge */}
                       <span style={{
                         ...pillStyle,
-                        background: "rgba(240, 167, 66, 0.1)",
+                         background: "rgba(201, 162, 39, 0.1)",
                         color: themeColors.highlightAmber,
                         border: `1px solid ${themeColors.highlightAmber}33`
                       }}>
@@ -270,7 +272,7 @@ export default function DocumentList({ refreshTrigger }) {
                       style={{
                         padding: "0.25rem 0.5rem",
                         borderRadius: "6px",
-                        background: "#120B21",
+                         background: "#1A1A1A",
                         color: themeColors.textPrimary,
                         border: `1px solid ${themeColors.borderDivider}`,
                         fontSize: "0.8rem",

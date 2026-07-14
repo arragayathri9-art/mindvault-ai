@@ -98,7 +98,7 @@ export default function DocUploader({ onUploadSuccess }) {
           style={{
             ...inputStyle,
             padding: "0.5rem 0.75rem",
-            background: "#120B21",
+            background: "#1A1A1A",
             color: themeColors.textPrimary,
           }}
         >
@@ -116,7 +116,7 @@ export default function DocUploader({ onUploadSuccess }) {
         style={{
           border: `2px dashed ${isDragOver ? themeColors.highlightAmber : themeColors.borderDivider}`,
           borderRadius: "10px",
-          background: isDragOver ? "rgba(75, 63, 158, 0.1)" : "rgba(255,255,255,0.02)",
+          background: isDragOver ? "rgba(201, 162, 39, 0.1)" : "rgba(255,255,255,0.02)",
           padding: "2rem 1.5rem",
           textAlign: "center",
           cursor: "pointer",

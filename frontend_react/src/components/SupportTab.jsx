@@ -191,8 +191,8 @@ export default function SupportTab({ apiKey }) {
                   style={{
                     marginTop: "1.25rem",
                     padding: "0.75rem 1rem",
-                    backgroundColor: "rgba(240, 167, 66, 0.15)",
-                    border: "1px solid rgba(240, 167, 66, 0.3)",
+                    backgroundColor: "rgba(201, 162, 39, 0.15)",
+                    border: "1px solid rgba(201, 162, 39, 0.3)",
                     borderRadius: "8px",
                     color: themeColors.highlightAmber,
                     display: "flex",

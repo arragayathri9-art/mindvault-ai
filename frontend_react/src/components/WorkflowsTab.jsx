@@ -2,6 +2,8 @@ import { useState, useEffect } from "react";
 import axios from "axios";
 import { getWorkflowRules, createWorkflowRule, deleteWorkflowRule, getWorkflowLogs, approveWorkflowLog, getTeams } from "../api";
 import { cardStyle, buttonStyle, inputStyle, themeColors, typography, sectionLabelStyle, pillStyle } from "../styles";
+import EmptyState from "./EmptyState";
+import { Zap } from "lucide-react";
 
 export default function WorkflowsTab({ apiKey, selectedTeam }) {
   const [rules, setRules] = useState([]);
@@ -211,14 +213,18 @@ export default function WorkflowsTab({ apiKey, selectedTeam }) {
             {loading && rules.length === 0 ? (
               <p style={{ color: themeColors.textSecondary, fontStyle: "italic" }}>Loading active rules...</p>
             ) : rules.length === 0 ? (
-              <p style={{ color: themeColors.textSecondary, fontStyle: "italic" }}>No active rules found.</p>
+              <EmptyState
+                icon={Zap}
+                title="No active rules"
+                description="Create rule conditions above to trigger automatic actions based on copilot queries."
+              />
             ) : (
               <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem", maxHeight: "320px", overflowY: "auto" }}>
                 {rules.map((rule) => (
                   <div
                     key={rule.id}
                     style={{
-                      background: "#120B21",
+                      background: themeColors.panelSurfaceRaised,
                       border: `1px solid ${themeColors.borderDivider}`,
                       borderRadius: "8px",
                       padding: "0.75rem 1rem",
@@ -271,7 +277,11 @@ export default function WorkflowsTab({ apiKey, selectedTeam }) {
         {loading && logs.length === 0 ? (
           <p style={{ color: themeColors.textSecondary, fontStyle: "italic" }}>Loading logs...</p>
         ) : logs.length === 0 ? (
-          <p style={{ color: themeColors.textSecondary, fontStyle: "italic" }}>No rule executions logged yet.</p>
+          <EmptyState
+            icon={Zap}
+            title="No rule executions logged yet"
+            description="Automatic workflow action alerts and authorization history will populate here."
+          />
         ) : (
           <div style={{ display: "flex", flexDirection: "column", gap: "1rem", maxHeight: "400px", overflowY: "auto" }}>
             {logs.map((log) => {
@@ -280,8 +290,8 @@ export default function WorkflowsTab({ apiKey, selectedTeam }) {
                 <div
                   key={log.id}
                   style={{
-                    background: "#120B21",
-                    border: `1px solid ${isPending ? "rgba(240, 167, 66, 0.3)" : themeColors.borderDivider}`,
+                    background: themeColors.panelSurfaceRaised,
+                    border: `1px solid ${isPending ? "rgba(201, 162, 39, 0.3)" : themeColors.borderDivider}`,
                     borderRadius: "10px",
                     padding: "1rem",
                     display: "flex",
@@ -298,7 +308,7 @@ export default function WorkflowsTab({ apiKey, selectedTeam }) {
                         style={{
                           fontFamily: typography.mono.fontFamily,
                           fontSize: "0.7rem",
-                          backgroundColor: isPending ? "rgba(240, 167, 66, 0.15)" : "rgba(52, 211, 153, 0.15)",
+                          backgroundColor: isPending ? "rgba(201, 162, 39, 0.15)" : "rgba(95, 167, 119, 0.15)",
                           color: isPending ? themeColors.highlightAmber : themeColors.confidenceHigh,
                           padding: "0.1rem 0.4rem",
                           borderRadius: "4px",
@@ -329,13 +339,13 @@ export default function WorkflowsTab({ apiKey, selectedTeam }) {
                       style={{
                         background: themeColors.highlightAmber,
                         border: "none",
-                        color: "#150F26",
+                        color: themeColors.bgBase,
                         padding: "0.4rem 0.8rem",
                         borderRadius: "6px",
                         cursor: "pointer",
                         fontWeight: "bold",
                         fontSize: "0.8rem",
-                        boxShadow: "0 2px 6px rgba(240,167,66,0.3)"
+                        boxShadow: "0 2px 6px rgba(201, 162, 39, 0.3)"
                       }}
                     >
                       Authorize Action

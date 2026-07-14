@@ -5,20 +5,14 @@ from pptx.dml.color import RGBColor
 from pptx.enum.text import PP_ALIGN
 from pptx.enum.shapes import MSO_SHAPE
 
-# Theme Colors (Premium Purple / Amber Theme)
-DARK_BG = RGBColor(21, 15, 38)         # #150F26 (deep purple-navy)
-CARD_BG = RGBColor(28, 22, 56)         # #1C1638 (raised purple)
-BORDER_COLOR = RGBColor(46, 38, 80)    # #2E2650 (hairline divider)
-WHITE_TEXT = RGBColor(245, 243, 250)   # #F5F3FA (primary text)
-GRAY_TEXT = RGBColor(139, 132, 173)    # #8B84AD (secondary text)
-PURPLE_ACCENT = RGBColor(75, 63, 158)  # #4B3F9E (violet)
-AMBER_HIGHLIGHT = RGBColor(240, 167, 66) # #F0A742 (amber)
-
-# Rotate color maps for KPI colors
-GOLD_ACCENT = AMBER_HIGHLIGHT
-INDIGO_ACCENT = PURPLE_ACCENT
-RED_ACCENT = RGBColor(239, 91, 91)     # #EF5B5B (coral red)
-GREEN_ACCENT = RGBColor(52, 211, 153)  # #34D399 (emerald)
+DARK_BG = RGBColor(0x16, 0x16, 0x16)
+CARD_BG = RGBColor(0x1F, 0x1F, 0x1F)
+BORDER_COLOR = RGBColor(0x33, 0x33, 0x33)
+WHITE_TEXT = RGBColor(0xF2, 0xF2, 0xF0)
+GRAY_TEXT = RGBColor(0x8A, 0x8A, 0x8A)
+GOLD_ACCENT = RGBColor(0xC9, 0xA2, 0x27)
+RED_ACCENT = RGBColor(0xC9, 0x52, 0x4F)     # Muted brick red
+GREEN_ACCENT = RGBColor(0x5F, 0xA7, 0x77)    # Muted sage green
 
 # Typography families
 FONT_HEADING = "Georgia"
@@ -37,7 +31,7 @@ def _add_accent_decorations(slide):
         MSO_SHAPE.RECTANGLE, Inches(0), Inches(0), Inches(10), Inches(0.08)
     )
     shape.fill.solid()
-    shape.fill.fore_color.rgb = AMBER_HIGHLIGHT
+    shape.fill.fore_color.rgb = GOLD_ACCENT
     shape.line.fill.background()
 
 def _add_slide_header(slide, title_text):
@@ -61,7 +55,7 @@ def _add_slide_header(slide, title_text):
         MSO_SHAPE.RECTANGLE, Inches(0.5), Inches(1.15), Inches(1.5), Inches(0.03)
     )
     shape.fill.solid()
-    shape.fill.fore_color.rgb = PURPLE_ACCENT
+    shape.fill.fore_color.rgb = GOLD_ACCENT
     shape.line.fill.background()
 
 def create_title_slide(prs, title, subtitle):
@@ -80,7 +74,7 @@ def create_title_slide(prs, title, subtitle):
     p.font.name = FONT_HEADING
     p.font.size = Pt(42)
     p.font.bold = True
-    p.font.color.rgb = AMBER_HIGHLIGHT
+    p.font.color.rgb = GOLD_ACCENT
     
     if subtitle:
         p2 = tf.add_paragraph()
@@ -96,7 +90,7 @@ def create_title_slide(prs, title, subtitle):
         MSO_SHAPE.RECTANGLE, Inches(3.5), Inches(5.2), Inches(3.0), Inches(0.04)
     )
     shape.fill.solid()
-    shape.fill.fore_color.rgb = PURPLE_ACCENT
+    shape.fill.fore_color.rgb = GOLD_ACCENT
     shape.line.fill.background()
 
 def create_content_slide(prs, title, bullets):
@@ -182,8 +176,8 @@ def create_kpi_slide(prs, title, metrics):
     card_w = (total_width - (gap * (num_kpis - 1))) / num_kpis
     
     color_map = {
-        "purple": PURPLE_ACCENT,
-        "indigo": INDIGO_ACCENT,
+        "purple": GOLD_ACCENT,
+        "indigo": GOLD_ACCENT,
         "gold": GOLD_ACCENT,
         "red": RED_ACCENT,
         "green": GREEN_ACCENT
@@ -202,7 +196,7 @@ def create_kpi_slide(prs, title, metrics):
         
         # Top color accent border
         color_name = metric.get("color", "indigo").lower()
-        border_color = color_map.get(color_name, INDIGO_ACCENT)
+        border_color = color_map.get(color_name, GOLD_ACCENT)
         
         accent = slide.shapes.add_shape(
             MSO_SHAPE.RECTANGLE, Inches(left_pos + 0.1), Inches(2.1), Inches(card_w - 0.2), Inches(0.08)

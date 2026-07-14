@@ -1,18 +1,22 @@
 // MindVault AI Purple/Amber Theme Styles
 
 export const themeColors = {
-  bgBase: "#150F26",          // deep purple-navy
-  panelSurface: "#1C1638",    // raised purple
-  borderDivider: "#2E2650",   // hairline divider
-  textPrimary: "#F5F3FA",
-  textSecondary: "#8B84AD",
-  accentPrimary: "#4B3F9E",   // violet buttons, active nav, icons
-  highlightAmber: "#F0A742",  // amber eyebrow labels
-  confidenceHigh: "#34D399",  // emerald
-  confidenceMedium: "#F0A742",// amber
-  confidenceLow: "#EF5B5B",   // coral red
-  badgeViolet: "#3D3470",     // violet-tinted circle bg
-  badgeAmber: "#4A3714",      // amber-tinted circle bg
+  bgBase: "#161616",
+  panelSurface: "#1F1F1F",
+  panelSurfaceRaised: "#232323",
+  borderDivider: "#333333",
+  accentPrimary: "#C9A227",          // gold accent
+  highlightAmber: "#C9A227",         // kept for backward-compatibility, now gold
+  textPrimary: "#F2F2F0",
+  textSecondary: "#8A8A8A",
+  success: "#5FA777",                // muted sage
+  danger: "#C9524F",                 // muted brick-red
+  dangerAdminBadge: "#4A2020",
+  confidenceHigh: "#5FA777",
+  confidenceMedium: "#C9A227",
+  confidenceLow: "#C9524F",
+  badgeViolet: "#232323",
+  badgeAmber: "#282828",
 };
 
 export const typography = {
@@ -38,7 +42,7 @@ export const inputStyle = {
   padding: "0.8rem 1.2rem",
   borderRadius: "10px",
   border: `1px solid ${themeColors.borderDivider}`,
-  background: "#120B21",
+  background: "#1A1A1A",
   color: themeColors.textPrimary,
   fontSize: "0.95rem",
   boxSizing: "border-box",
@@ -56,8 +60,8 @@ export const buttonStyle = {
   padding: "0.75rem 1.8rem",
   borderRadius: "10px",
   border: "none",
-  background: `linear-gradient(135deg, ${themeColors.accentPrimary} 0%, #312680 100%)`,
-  color: "white",
+  background: `linear-gradient(135deg, ${themeColors.accentPrimary} 0%, #7A5B0B 100%)`,
+  color: themeColors.bgBase,
   fontWeight: 600,
   fontSize: "0.95rem",
   cursor: "pointer",
@@ -99,7 +103,7 @@ export const sectionLabelStyle = {
 };
 
 export const pillStyle = {
-  background: "rgba(75, 63, 158, 0.15)",
+  background: "rgba(201, 162, 39, 0.12)",
   border: `1px solid ${themeColors.borderDivider}`,
   padding: "0.3rem 0.7rem",
   borderRadius: "8px",
@@ -112,7 +116,7 @@ export function confidenceStyle(score) {
   if (score >= 80) {
     return {
       color: themeColors.confidenceHigh,
-      bg: "rgba(52, 211, 153, 0.1)",
+      bg: "rgba(95, 167, 119, 0.1)",
       border: `1px solid ${themeColors.confidenceHigh}55`,
       label: "High Confidence"
     };
@@ -120,14 +124,14 @@ export function confidenceStyle(score) {
   if (score >= 40) {
     return {
       color: themeColors.confidenceMedium,
-      bg: "rgba(240, 167, 66, 0.1)",
+      bg: "rgba(201, 162, 39, 0.1)",
       border: `1px solid ${themeColors.confidenceMedium}55`,
       label: "Medium Confidence"
     };
   }
   return {
     color: themeColors.confidenceLow,
-    bg: "rgba(239, 91, 91, 0.1)",
+    bg: "rgba(201, 82, 79, 0.1)",
     border: `1px solid ${themeColors.confidenceLow}55`,
     label: "Low Confidence"
   };
@@ -141,4 +145,18 @@ export const kpiCardStyle = {
   textAlign: "center",
   flex: 1,
   boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
+};
+
+export const spacing = {
+  xs: "0.4rem",
+  sm: "0.75rem",
+  md: "1.25rem",
+  lg: "2rem",
+  xl: "3rem",
+};
+
+export const radius = {
+  sm: "8px",
+  md: "12px",
+  lg: "16px",
 };

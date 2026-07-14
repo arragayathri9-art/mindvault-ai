@@ -85,7 +85,7 @@ export default function GapReportsTab({ apiKey }) {
             <div
               key={report.id}
               style={{
-                background: "#120B21",
+                background: "#1A1A1A",
                 borderLeft: `3px solid ${themeColors.highlightAmber}`,
                 borderRadius: "0 8px 8px 0",
                 padding: "1.25rem",
