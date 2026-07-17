@@ -285,7 +285,7 @@ export default function App() {
             )}
             
             {activeItem.component === "workflows" && (
-              <WorkflowsPage />
+              <WorkflowsPage workflowType={activeItem.id} />
             )}
             
             {activeItem.component === "documents" && (

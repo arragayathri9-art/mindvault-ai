@@ -6,7 +6,7 @@ import { CheckCircle2, Eye, RefreshCw, Layers } from "lucide-react";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || (import.meta.env.DEV ? "http://localhost:8000" : "");
 
-export default function WorkflowsPage() {
+export default function WorkflowsPage({ workflowType }) {
   const [logs, setLogs] = useState([]);
   const [loading, setLoading] = useState(false);
   const [activeWorkflow, setActiveWorkflow] = useState(null);
@@ -88,6 +88,31 @@ export default function WorkflowsPage() {
     }
   ];
 
+  const isLeave = workflowType?.includes("leave");
+  const isOnboard = workflowType?.includes("onboard") || workflowType?.includes("offer");
+
+  const filteredWorkflows = activeWorkflows.filter(wf => {
+    if (isLeave) {
+      return wf.name.toLowerCase().includes("leave") || wf.name.toLowerCase().includes("request");
+    }
+    if (isOnboard) {
+      return wf.name.toLowerCase().includes("onboard") || wf.name.toLowerCase().includes("offer");
+    }
+    return true; // show all
+  });
+
+  const pageTitle = isLeave 
+    ? "Leave Approval Pipeline" 
+    : isOnboard 
+    ? "Onboarding Workflow Pipelines" 
+    : "Active Workflow Pipelines";
+
+  const pageDesc = isLeave 
+    ? "Review and authorize internal employee leave applications." 
+    : isOnboard 
+    ? "Verify and track system setup for newly onboarded personnel." 
+    : "Enterprise pipeline monitoring console.";
+
   return (
     <div style={{ display: "flex", gap: "2.5rem", flexWrap: "wrap", alignItems: "flex-start", width: "100%" }}>
       {/* Left Column: Workflows Console */}
@@ -96,10 +121,10 @@ export default function WorkflowsPage() {
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
             <div>
               <h3 style={{ ...typography.heading, fontSize: "1.25rem", marginTop: 0, marginBottom: "0.25rem" }}>
-                Active Workflow Pipelines
+                {pageTitle}
               </h3>
               <p style={{ color: themeColors.textSecondary, fontSize: "0.85rem", margin: 0 }}>
-                Enterprise pipeline monitoring console.
+                {pageDesc}
               </p>
             </div>
             <button
@@ -137,7 +162,7 @@ export default function WorkflowsPage() {
                 </tr>
               </thead>
               <tbody>
-                {activeWorkflows.map((wf) => (
+                {filteredWorkflows.map((wf) => (
                   <tr
                     key={wf.id}
                     style={{
