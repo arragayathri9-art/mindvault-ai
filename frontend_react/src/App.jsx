@@ -14,7 +14,7 @@ import {
   Sparkles, Database, Zap, FolderOpen, Clock, Settings, Bot, LogOut,
   FileText, CheckSquare, ClipboardList, BookOpen, DatabaseBackup
 } from "lucide-react";
-import { themeColors, typography, radius } from "./styles";
+import { themeColors, typography, radius, pillStyle } from "./styles";
 
 // nav item configurations mapped specifically to the user's role
 const ROLE_NAV_CONFIGS = {
