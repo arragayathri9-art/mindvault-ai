@@ -36,15 +36,6 @@ export default function Login({ onLoginSuccess }) {
       department: "Operations",
       badge: "Team Lead",
       avatar: "👨‍💼"
-    },
-    {
-      role: "Applicant",
-      email: "candidate@mindvault.ai",
-      password: "CAN@123",
-      name: "Rahul Sharma",
-      department: "Engineering Candidate",
-      badge: "Applicant",
-      avatar: "🎓"
     }
   ];
 

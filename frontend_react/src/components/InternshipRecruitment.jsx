@@ -134,9 +134,7 @@ export default function InternshipRecruitment({ role }) {
   const [statusFilter, setStatusFilter] = useState("All");
 
   // Dynamic Views: "pipeline" (HR/Manager), "evaluator" (Manager/HR), "analytics" (HR), "chat" (HR), "candidateView" (Candidate)
-  const [activeSubTab, setActiveSubTab] = useState(
-    currentRole === "Applicant" ? "candidateView" : "pipeline"
-  );
+  const [activeSubTab, setActiveSubTab] = useState("pipeline");
 
   // Modals state
   const [showRejectModal, setShowRejectModal] = useState(false);

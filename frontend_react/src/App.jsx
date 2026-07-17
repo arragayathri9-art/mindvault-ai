@@ -43,9 +43,6 @@ const ROLE_NAV_CONFIGS = {
     { id: "mgr_workflows", label: "Team Workflows", component: "workflows", icon: Zap },
     { id: "mgr_perf", label: "Performance Reports", component: "documents", icon: ClipboardList, defaultCategory: "Reports" },
     { id: "mgr_assistant", label: "AI Assistant", component: "workspace", icon: Sparkles },
-  ],
-  Applicant: [
-    { id: "cand_status", label: "My Application Status", component: "recruitment", icon: Clock }
   ]
 };
 
