@@ -146,7 +146,7 @@ export default function InternshipRecruitment({ role }) {
     date: "2026-07-22",
     time: "14:00",
     type: "Google Meet",
-    interviewer: currentRole === "Team Lead" ? "David Miller" : "Dev (VP Engineering)",
+    interviewer: (currentRole === "Manager" || currentRole === "Team Lead") ? "David Miller" : "Dev (VP Engineering)",
     notes: "Review coding profiles and algorithmic optimization basics."
   });
 
@@ -358,7 +358,7 @@ export default function InternshipRecruitment({ role }) {
       {/* Dynamic Sub-tab navigation */}
       {currentRole !== "Applicant" && (
         <div style={{ display: "flex", gap: "0.5rem", borderBottom: `1px solid ${themeColors.borderDivider}`, paddingBottom: "0.75rem" }}>
-          {currentRole === "HR Manager" && (
+          {(currentRole === "HR" || currentRole === "HR Manager") && (
             <>
               <button 
                 onClick={() => setActiveSubTab("pipeline")} 
@@ -381,7 +381,7 @@ export default function InternshipRecruitment({ role }) {
             </>
           )}
 
-          {currentRole === "Team Lead" && (
+          {(currentRole === "Manager" || currentRole === "Team Lead") && (
             <>
               <button 
                 onClick={() => setActiveSubTab("pipeline")} 
@@ -527,7 +527,7 @@ export default function InternshipRecruitment({ role }) {
 
                   {/* Actions based on role and status */}
                   <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem", alignItems: "center" }}>
-                    {currentRole === "HR Manager" && selectedApplicant.status === "Applied" && (
+                    {(currentRole === "HR" || currentRole === "HR Manager") && selectedApplicant.status === "Applied" && (
                       <>
                         <button onClick={handleShortlist} style={{ ...buttonStyle, marginTop: 0, background: themeColors.success, color: "#FFFFFF", border: "none", fontSize: "0.8rem", padding: "0.4rem 0.8rem" }}>
                           Accept for Interview
@@ -538,13 +538,13 @@ export default function InternshipRecruitment({ role }) {
                       </>
                     )}
 
-                    {currentRole === "HR Manager" && selectedApplicant.status === "Shortlisted" && (
+                    {(currentRole === "HR" || currentRole === "HR Manager") && selectedApplicant.status === "Shortlisted" && (
                       <button onClick={() => setShowScheduleModal(true)} style={{ ...buttonStyle, marginTop: 0, background: themeColors.accentPrimary, color: "#121212", border: "none", fontSize: "0.8rem", padding: "0.4rem 0.8rem" }}>
                         <Calendar size={12} style={{ marginRight: "0.25rem" }} /> Schedule Interview
                       </button>
                     )}
 
-                    {currentRole === "HR Manager" && selectedApplicant.status === "Selected" && (
+                    {(currentRole === "HR" || currentRole === "HR Manager") && selectedApplicant.status === "Selected" && (
                       <div style={{ display: "flex", gap: "0.5rem" }}>
                         <button onClick={() => handleHRFinalDecision("Approve")} style={{ ...buttonStyle, marginTop: 0, background: themeColors.success, color: "#FFFFFF", border: "none", fontSize: "0.8rem", padding: "0.4rem 0.8rem" }}>
                           <Check size={12} /> Approve & Send Offer
@@ -704,8 +704,8 @@ export default function InternshipRecruitment({ role }) {
                       </div>
                     )}
 
-                    {/* If Team Lead: display interview conduct rating form */}
-                    {currentRole === "Team Lead" && selectedApplicant.status === "Interview Scheduled" && (
+                    {/* If Team Lead/Manager: display interview conduct rating form */}
+                    {(currentRole === "Manager" || currentRole === "Team Lead") && selectedApplicant.status === "Interview Scheduled" && (
                       <div style={{ background: "rgba(201,162,39,0.02)", border: `1px solid ${themeColors.borderDivider}`, borderRadius: radius.md, padding: "1.25rem" }}>
                         <h4 style={{ ...typography.heading, fontSize: "0.85rem", margin: "0 0 0.75rem", color: themeColors.accentPrimary }}>
                           Submit Interview Evaluation
