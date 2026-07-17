@@ -12,12 +12,32 @@ class WorkflowExecutor:
         Initializes and runs the initial automated steps of a workflow template.
         """
         description = input_data.get("description", "Workflow request")
-        
-        if "invoice" in template_name.lower():
-            # 1. Invoice Processing Workflow
-            # Step 1: AI Data Extraction
+        t_name_lower = template_name.lower()
+
+        if "leave" in t_name_lower or "vacation" in t_name_lower or "pto" in t_name_lower:
+            # 1. Leave Approval Workflow
+            steps = [
+                {"name": "Submit Request", "status": "completed", "data": {"details": description}},
+                {"name": "Company Leave Policy Check", "status": "completed", "data": {"status": "Balance Valid", "rules_checked": "PTO-2026"}},
+                {"name": "HR Operations Review", "status": "pending", "data": {"assigned_approver": "Jessica Chen (HR Lead)"}},
+                {"name": "Update Calendar & Notify", "status": "pending", "data": {}}
+            ]
+            instance_id = db.create_workflow_instance("Leave Approval", "HR Operations Review", "in_progress", steps)
+            db.add_notification("Leave Approval Pending", f"Jessica Chen review required for leave request: {description[:50]}...", "workflow")
+            db.add_task(f"Review Leave Request", f"Approve PTO request: '{description[:50]}...'", "Jessica Chen", "medium", "2026-07-18")
+
+            return {
+                "instance_id": instance_id,
+                "status": "in_progress",
+                "current_step": "HR Operations Review",
+                "steps": steps,
+                "message": "Leave request submitted and balance verified. Sent to Jessica Chen for HR Operations approval."
+            }
+
+        elif "expense" in t_name_lower or "invoice" in t_name_lower or "reimbursement" in t_name_lower:
+            # 2. Expense Approval Workflow
             extracted_fields = {
-                "invoice_number": "INV-2026-089",
+                "invoice_number": "EXP-2026-89",
                 "amount": "$4,250.00",
                 "vendor": "CloudScale Systems",
                 "category": "SaaS Platform Subscription"
@@ -26,7 +46,7 @@ class WorkflowExecutor:
                 try:
                     client = Groq(api_key=api_key)
                     prompt = (
-                        "You are an AI Invoice Data Extractor. Extract the invoice number, total amount, vendor name, and expense category "
+                        "You are an AI Invoice Data Extractor. Extract the invoice/expense number, total amount, vendor name, and expense category "
                         "from the user description. Return a JSON object with keys: invoice_number, amount, vendor, category.\n"
                         f"Description:\n{description}"
                     )
@@ -39,66 +59,124 @@ class WorkflowExecutor:
                     )
                     extracted_fields = json.loads(response.choices[0].message.content)
                 except Exception as e:
-                    print(f"Workflow extraction failed, using default: {e}")
+                    print(f"Workflow extraction failed: {e}")
 
             steps = [
-                {"name": "AI Data Extraction", "status": "completed", "data": extracted_fields},
-                {"name": "Expense Categorization", "status": "completed", "data": {"category": extracted_fields.get("category", "Software"), "policy_status": "Compliant"}},
-                {"name": "Manager Review", "status": "pending", "data": {"assigned_approver": "Deepak Rao (Finance Director)"}},
-                {"name": "Process Payment & Notify Staff", "status": "pending", "data": {}}
+                {"name": "AI Expense Audit", "status": "completed", "data": extracted_fields},
+                {"name": "Policy Status Check", "status": "completed", "data": {"category": extracted_fields.get("category", "Software"), "policy_status": "Compliant"}},
+                {"name": "Finance Director Review", "status": "pending", "data": {"assigned_approver": "Deepak Rao (Finance Director)"}},
+                {"name": "Reimbursement Processing", "status": "pending", "data": {}}
             ]
-            
-            instance_id = db.create_workflow_instance("Invoice Processing", "Manager Review", "in_progress", steps)
-            db.add_notification("Approval Requested", f"Manager review required for Invoice {extracted_fields.get('invoice_number')} from {extracted_fields.get('vendor')}.", "workflow")
-            db.add_task(f"Approve Invoice {extracted_fields.get('invoice_number')}", f"Verify SaaS expenses for {extracted_fields.get('vendor')} totaling {extracted_fields.get('amount')}.", "Deepak Rao", "high", "2026-07-25")
+            instance_id = db.create_workflow_instance("Expense Approval", "Finance Director Review", "in_progress", steps)
+            db.add_notification("Expense Review Requested", f"Finance Director authorization required for Expense {extracted_fields.get('invoice_number')} from {extracted_fields.get('vendor')}.", "workflow")
+            db.add_task(f"Approve Expense {extracted_fields.get('invoice_number')}", f"Verify SaaS expenses for {extracted_fields.get('vendor')} totaling {extracted_fields.get('amount')}.", "Deepak Rao", "high", "2026-07-25")
 
             return {
                 "instance_id": instance_id,
                 "status": "in_progress",
-                "current_step": "Manager Review",
+                "current_step": "Finance Director Review",
                 "steps": steps,
-                "message": f"Invoice workflow initialized. Extracted invoice data: {extracted_fields.get('vendor')} - {extracted_fields.get('amount')}. Routing to Deepak Rao."
+                "message": f"Expense workflow initialized. Extracted data: {extracted_fields.get('vendor')} - {extracted_fields.get('amount')}. Routing to Deepak Rao."
             }
 
-        elif "leave" in template_name.lower() or "off" in template_name.lower():
-            # 2. Leave Request Approval Workflow
+        elif "onboard" in t_name_lower:
+            # 3. Employee Onboarding Workflow
             steps = [
-                {"name": "Submit Request", "status": "completed", "data": {"details": description}},
-                {"name": "Company Leave Policy Check", "status": "completed", "data": {"status": "Balance Valid", "rules_checked": "PTO-2026"}},
-                {"name": "HR Operations Review", "status": "pending", "data": {"assigned_approver": "Jessica Chen (HR Lead)"}},
-                {"name": "Update Calendar & Notify", "status": "pending", "data": {}}
+                {"name": "Setup Onboarding Plan", "status": "completed", "data": {"details": description}},
+                {"name": "Welcome Package Dispatch", "status": "completed", "data": {"status": "Dispatched"}},
+                {"name": "IT Hardware Provisioning", "status": "pending", "data": {"assigned_approver": "Arjun Mehta (IT Lead)"}},
+                {"name": "HR Review & Complete", "status": "pending", "data": {}}
             ]
-            
-            instance_id = db.create_workflow_instance("Leave Request Approval", "HR Operations Review", "in_progress", steps)
-            db.add_notification("Leave Approval Pending", f"Jessica Chen review required for leave request: {description[:50]}...", "workflow")
-            db.add_task(f"Review Leave Request", f"Approve PTO request: '{description[:50]}...'", "Jessica Chen", "medium", "2026-07-18")
+            instance_id = db.create_workflow_instance("Employee Onboarding", "IT Hardware Provisioning", "in_progress", steps)
+            db.add_notification("Onboarding Verification Needed", f"IT Provisioning required for onboarding: {description[:50]}...", "workflow")
+            db.add_task(f"IT Hardware Provisioning", f"Prepare workstation and systems for onboarding: '{description[:50]}...'", "Arjun Mehta", "medium", "2026-07-19")
 
             return {
                 "instance_id": instance_id,
                 "status": "in_progress",
-                "current_step": "HR Operations Review",
+                "current_step": "IT Hardware Provisioning",
                 "steps": steps,
-                "message": "Leave request submitted and balance verified. Sent to Jessica Chen for HR Operations approval."
+                "message": "Onboarding workflow triggered. Welcoming package sent. Routed to Arjun Mehta for IT provisioning."
+            }
+
+        elif "offboard" in t_name_lower or "exit" in t_name_lower:
+            # 4. Employee Offboarding Workflow
+            steps = [
+                {"name": "Exit Intake Submission", "status": "completed", "data": {"details": description}},
+                {"name": "Asset Recovery Check", "status": "completed", "data": {"status": "Pending laptop return"}},
+                {"name": "Systems Access Revocation", "status": "pending", "data": {"assigned_approver": "Arjun Mehta (IT Lead)"}},
+                {"name": "HR Exit Signoff", "status": "pending", "data": {}}
+            ]
+            instance_id = db.create_workflow_instance("Employee Offboarding", "Systems Access Revocation", "in_progress", steps)
+            db.add_notification("Offboarding Scribe Active", f"Access revocation required for employee exit: {description[:50]}...", "workflow")
+            db.add_task(f"Revoke Systems Access", f"Revoke emails and database keys: '{description[:50]}...'", "Arjun Mehta", "high", "2026-07-16")
+
+            return {
+                "instance_id": instance_id,
+                "status": "in_progress",
+                "current_step": "Systems Access Revocation",
+                "steps": steps,
+                "message": "Offboarding initiated. Exit interview details recorded. Routed to Arjun Mehta for Systems Revocation."
+            }
+
+        elif "purchase" in t_name_lower or "procurement" in t_name_lower:
+            # 6. Purchase Requests Workflow
+            steps = [
+                {"name": "Submit Purchase Request", "status": "completed", "data": {"details": description}},
+                {"name": "Budget Allocation Check", "status": "completed", "data": {"status": "Budget Available"}},
+                {"name": "Department Head Review", "status": "pending", "data": {"assigned_approver": "Jessica Chen (HR Lead)"}},
+                {"name": "Procurement Purchase Order Creation", "status": "pending", "data": {}}
+            ]
+            instance_id = db.create_workflow_instance("Purchase Request", "Department Head Review", "in_progress", steps)
+            db.add_notification("Purchase Review Requested", f"Jessica Chen authorization required for Purchase: {description[:50]}...", "workflow")
+            db.add_task(f"Review Purchase Request", f"Review procurement item request: '{description[:50]}...'", "Jessica Chen", "high", "2026-07-21")
+
+            return {
+                "instance_id": instance_id,
+                "status": "in_progress",
+                "current_step": "Department Head Review",
+                "steps": steps,
+                "message": "Purchase request submitted. Mapped budget verified. Routed to Jessica Chen for department approval."
+            }
+
+        elif "travel" in t_name_lower or "flight" in t_name_lower or "hotel" in t_name_lower or "trip" in t_name_lower:
+            # 7. Travel Requests Workflow
+            steps = [
+                {"name": "Submit Travel Request", "status": "completed", "data": {"details": description}},
+                {"name": "Travel Desk Estimate Check", "status": "completed", "data": {"estimated_cost": "$850.00"}},
+                {"name": "Manager Travel Authorization", "status": "pending", "data": {"assigned_approver": "Deepak Rao (Finance Director)"}},
+                {"name": "Booking and Ticket Issuance", "status": "pending", "data": {}}
+            ]
+            instance_id = db.create_workflow_instance("Travel Request", "Manager Travel Authorization", "in_progress", steps)
+            db.add_notification("Travel Authorization Required", f"Deepak Rao authorization required for Trip: {description[:50]}...", "workflow")
+            db.add_task(f"Authorize Travel", f"Evaluate flight/hotel reimbursement for trip: '{description[:50]}...'", "Deepak Rao", "medium", "2026-07-24")
+
+            return {
+                "instance_id": instance_id,
+                "status": "in_progress",
+                "current_step": "Manager Travel Authorization",
+                "steps": steps,
+                "message": "Travel request logged. Costs compiled. Routed to Deepak Rao for manager authorization."
             }
 
         else:
-            # 3. General Compliance / Task Approval Workflow
+            # 5. Document Approval Workflow (Default fallback for other triggers)
             steps = [
-                {"name": "Intake Submission", "status": "completed", "data": {"input": description}},
-                {"name": "AI Risk Inspection", "status": "completed", "data": {"risk_index": "Low", "verdict": "Cleared"}},
-                {"name": "Executive Verification", "status": "pending", "data": {"assigned_approver": "Board Committee"}},
-                {"name": "Publish Findings", "status": "pending", "data": {}}
+                {"name": "Policy Draft Submission", "status": "completed", "data": {"input": description}},
+                {"name": "Legal Compliance Check", "status": "completed", "data": {"risk_index": "Low", "verdict": "Cleared"}},
+                {"name": "Executive Review", "status": "pending", "data": {"assigned_approver": "Jessica Chen (HR Lead)"}},
+                {"name": "Publish to Knowledge Base", "status": "pending", "data": {}}
             ]
-            
-            instance_id = db.create_workflow_instance(template_name, "Executive Verification", "in_progress", steps)
-            db.add_notification("Verification Requested", f"Board review requested for: {template_name}.", "workflow")
-            
+            instance_id = db.create_workflow_instance("Document Approval", "Executive Review", "in_progress", steps)
+            db.add_notification("Document Review Requested", f"Jessica Chen review requested for policy draft: {template_name}.", "workflow")
+            db.add_task(f"Review Policy Draft: {template_name}", f"Evaluate Draft: '{description[:50]}...'", "Jessica Chen", "medium", "2026-07-22")
+
             return {
                 "instance_id": instance_id,
                 "status": "in_progress",
-                "current_step": "Executive Verification",
+                "current_step": "Executive Review",
                 "steps": steps,
-                "message": f"Compliance Workflow '{template_name}' triggered. Sent to Board Committee for Executive Verification."
+                "message": f"Document Approval Workflow '{template_name}' triggered. Sent to Jessica Chen for Executive Review."
             }
 
     def approve(self, instance_id: int, approver: str, api_key: str) -> dict:

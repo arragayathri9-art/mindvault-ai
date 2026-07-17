@@ -76,7 +76,8 @@ class Retriever:
             results.append({
                 "text": self.metadata[idx]["text"],
                 "source": self.metadata[idx]["source"],
-                "score": score
+                "score": score,
+                "page_number": self.metadata[idx].get("page_number")
             })
             
         return results

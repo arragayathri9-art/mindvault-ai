@@ -1,11 +1,12 @@
-import { useState, useRef } from "react";
-import { askMindVault, notifyExpert, generatePPT } from "../api";
+import { useState, useRef, useEffect } from "react";
+import { askMindVault, notifyExpert, generatePPT, logActivity } from "../api";
 import {
   inputStyle, buttonStyle, linkButtonStyle, cardStyle,
   sectionLabelStyle, pillStyle, confidenceStyle, themeColors, typography
 } from "../styles";
 
-export default function AskTab({ apiKey, selectedTeam }) {
+
+export default function AskTab({ apiKey, selectedTeam, prefilledQuery, setPrefilledQuery }) {
   const [query, setQuery] = useState("");
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState(null);
@@ -15,7 +16,33 @@ export default function AskTab({ apiKey, selectedTeam }) {
   const [listeningError, setListeningError] = useState("");
   const [notifiedExperts, setNotifiedExperts] = useState({});
   const [generatingPPT, setGeneratingPPT] = useState(false);
+  const [feedback, setFeedback] = useState(null); // 'positive', 'negative', or null
   const recognitionRef = useRef(null);
+
+  useEffect(() => {
+    if (prefilledQuery) {
+      setQuery(prefilledQuery);
+      const executePrefilled = async () => {
+        setLoading(true);
+        setError("");
+        setResult(null);
+        setNotifiedExperts({});
+        setFeedback(null);
+        try {
+          const data = await askMindVault(prefilledQuery, apiKey, selectedTeam);
+          setResult(data);
+        } catch (err) {
+          setError(err?.response?.data?.detail || "Something went wrong reaching the API.");
+        } finally {
+          setLoading(false);
+          if (setPrefilledQuery) {
+            setPrefilledQuery("");
+          }
+        }
+      };
+      executePrefilled();
+    }
+  }, [prefilledQuery]);
 
   const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
 
@@ -66,6 +93,7 @@ export default function AskTab({ apiKey, selectedTeam }) {
     setError("");
     setResult(null);
     setNotifiedExperts({});
+    setFeedback(null);
     try {
       const data = await askMindVault(query, apiKey, selectedTeam);
       setResult(data);
@@ -145,7 +173,6 @@ export default function AskTab({ apiKey, selectedTeam }) {
           Active Team: {selectedTeam}
         </span>
       </div>
-
       <form onSubmit={handleAsk}>
         <div style={{ position: "relative" }}>
           <textarea
@@ -253,25 +280,81 @@ export default function AskTab({ apiKey, selectedTeam }) {
             })()}
           </div>
 
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "1.5rem" }}>
-            <button onClick={() => setShowReasoning((v) => !v)} style={linkButtonStyle}>
-              {showReasoning ? "Hide" : "Show"} reasoning details
-            </button>
-            <button
-              type="button"
-              onClick={handleDownloadAnswerCard}
-              disabled={generatingPPT}
-              style={{
-                ...linkButtonStyle,
-                color: themeColors.highlightAmber,
-                display: "flex",
-                alignItems: "center",
-                gap: "0.25rem",
-                textDecoration: "none"
-              }}
-            >
-              🖥️ {generatingPPT ? "Downloading..." : "Export as PPT Slide"}
-            </button>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "1.5rem", borderTop: `1px solid ${themeColors.borderDivider}`, paddingTop: "0.75rem", flexWrap: "wrap", gap: "0.75rem" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+              <span style={{ fontSize: "0.8rem", color: themeColors.textSecondary }}>Was this helpful?</span>
+              <button
+                type="button"
+                onClick={async () => {
+                  try {
+                    await logActivity({
+                      activity_type: "feedback_positive",
+                      description: `Positive feedback on query: "${query.slice(0, 30)}..."`,
+                      details: `Answer: "${result.answer.slice(0, 80)}..."`
+                    });
+                    setFeedback("positive");
+                  } catch (e) { console.error(e); }
+                }}
+                style={{
+                  background: feedback === "positive" ? "rgba(95, 167, 119, 0.2)" : "transparent",
+                  border: `1px solid ${feedback === "positive" ? themeColors.confidenceHigh : themeColors.borderDivider}`,
+                  borderRadius: "6px",
+                  color: feedback === "positive" ? themeColors.confidenceHigh : themeColors.textPrimary,
+                  padding: "0.2rem 0.5rem",
+                  cursor: "pointer",
+                  fontSize: "0.8rem",
+                  fontWeight: 600
+                }}
+              >
+                👍 Yes
+              </button>
+              <button
+                type="button"
+                onClick={async () => {
+                  try {
+                    await logActivity({
+                      activity_type: "feedback_negative",
+                      description: `Negative feedback on query: "${query.slice(0, 30)}..."`,
+                      details: `Answer: "${result.answer.slice(0, 80)}..."`
+                    });
+                    setFeedback("negative");
+                  } catch (e) { console.error(e); }
+                }}
+                style={{
+                  background: feedback === "negative" ? "rgba(201, 82, 79, 0.2)" : "transparent",
+                  border: `1px solid ${feedback === "negative" ? themeColors.confidenceLow : themeColors.borderDivider}`,
+                  borderRadius: "6px",
+                  color: feedback === "negative" ? themeColors.confidenceLow : themeColors.textPrimary,
+                  padding: "0.2rem 0.5rem",
+                  cursor: "pointer",
+                  fontSize: "0.8rem",
+                  fontWeight: 600
+                }}
+              >
+                👎 No
+              </button>
+            </div>
+            
+            <div style={{ display: "flex", gap: "1rem" }}>
+              <button onClick={() => setShowReasoning((v) => !v)} style={linkButtonStyle}>
+                {showReasoning ? "Hide" : "Show"} reasoning details
+              </button>
+              <button
+                type="button"
+                onClick={handleDownloadAnswerCard}
+                disabled={generatingPPT}
+                style={{
+                  ...linkButtonStyle,
+                  color: themeColors.highlightAmber,
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "0.25rem",
+                  textDecoration: "none"
+                }}
+              >
+                🖥️ {generatingPPT ? "Downloading..." : "Export as PPT Slide"}
+              </button>
+            </div>
           </div>
           {showReasoning && (
             <p style={{ color: themeColors.textSecondary, fontSize: "0.9rem", marginTop: "0.75rem", fontStyle: "italic" }}>
@@ -279,18 +362,67 @@ export default function AskTab({ apiKey, selectedTeam }) {
             </p>
           )}
 
-          <div style={{ marginTop: "1.5rem" }}>
-            <h4 style={sectionLabelStyle}>Sources</h4>
-            <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem" }}>
-              {result.sources.map((s, i) => (
-                <span key={i} style={pillStyle}>📄 {s}</span>
-              ))}
+          {/* Evidence Snippets & Page Citations */}
+          {result.snippets && result.snippets.length > 0 && (
+            <div style={{ marginTop: "1.5rem" }}>
+              <h4 style={sectionLabelStyle}>Evidence Citations & Snippets</h4>
+              <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+                {result.snippets.map((snip, idx) => (
+                  <div
+                    key={idx}
+                    style={{
+                      background: "rgba(255,255,255,0.01)",
+                      border: `1px solid ${themeColors.borderDivider}`,
+                      borderRadius: "8px",
+                      padding: "0.6rem 0.8rem",
+                      fontSize: "0.85rem"
+                    }}
+                  >
+                    <p style={{ margin: "0 0 0.4rem 0", color: themeColors.textPrimary, lineHeight: 1.4 }}>
+                      &ldquo;{snip.text}&rdquo;
+                    </p>
+                    <div style={{ fontSize: "0.75rem", color: themeColors.textSecondary }}>
+                      Source: <strong>{snip.source}</strong> {snip.page_number && <>| Page: <strong>{snip.page_number}</strong></>} | Score: <strong>{(snip.score * 100).toFixed(1)}%</strong>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
-          </div>
+          )}
+
+          {/* Sources Summary fallback */}
+          {(!result.snippets || result.snippets.length === 0) && result.sources && (
+            <div style={{ marginTop: "1.5rem" }}>
+              <h4 style={sectionLabelStyle}>Sources</h4>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem" }}>
+                {result.sources.map((s, i) => (
+                  <span key={i} style={pillStyle}>📄 {s}</span>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Low Confidence Gap Alert */}
+          {result.confidence_score < 70 && (
+            <div style={{ marginTop: "1.5rem", padding: "1rem", border: "1px solid rgba(239, 91, 91, 0.3)", borderRadius: "8px", background: "rgba(239, 91, 91, 0.05)" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", color: themeColors.confidenceLow, fontWeight: "bold", fontSize: "0.85rem", marginBottom: "0.4rem" }}>
+                ⚠️ LOW CONFIDENCE WARNING (GAP DETECTED)
+              </div>
+              <p style={{ color: themeColors.textSecondary, fontSize: "0.85rem", margin: "0 0 0.6rem 0", lineHeight: 1.4 }}>
+                This RAG answer has a confidence of {result.confidence_score}%. A knowledge gap report has been logged.
+              </p>
+              <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
+                <span style={{ fontSize: "0.8rem", color: themeColors.textPrimary }}>Recommendation:</span>
+                <span style={{ ...pillStyle, color: themeColors.highlightAmber, background: "rgba(201, 162, 39, 0.1)" }}>
+                  Start Policy Update Workflow
+                </span>
+              </div>
+            </div>
+          )}
 
           {result.experts && result.experts.length > 0 && (
             <div style={{ marginTop: "1.5rem" }}>
-              <h4 style={sectionLabelStyle}>People who may know more</h4>
+              <h4 style={sectionLabelStyle}>Policy Experts Contacts</h4>
               <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
                 {result.experts.map((e, i) => {
                   const status = notifiedExperts[e];
@@ -315,12 +447,12 @@ export default function AskTab({ apiKey, selectedTeam }) {
                             transition: "all 0.2s",
                           }}
                         >
-                          {status?.status === "sending" ? "Sending..." : `Notify ${e}`}
+                          {status?.status === "sending" ? "Sending..." : `Notify Expert`}
                         </button>
                       )}
                       
                       {status?.status === "sending" && (
-                        <span style={{ fontSize: "0.8rem", color: themeColors.textSecondary }}>Sending...</span>
+                        <span style={{ fontSize: "0.8rem", color: themeColors.textSecondary }}>Sending email alert...</span>
                       )}
                       
                       {status?.status === "success" && (

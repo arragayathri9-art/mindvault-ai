@@ -247,3 +247,7 @@ export async function updateTaskStatus(taskId, status) {
   return response.data;
 }
 
+export async function logActivity(payload) {
+  const response = await axios.post(`${API_BASE_URL}/api/activity`, payload);
+  return response.data;
+}

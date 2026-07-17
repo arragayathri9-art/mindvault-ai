@@ -79,7 +79,9 @@ STATE = {
 class AskRequest(BaseModel):
     query: str
     api_key: str | None = None
-    team_id: str | None = "General"  # Additive field
+    team_id: str | None = "General"
+    user_role: str | None = None
+    comm_style: str | None = None
 
 
 class AskResponse(BaseModel):
@@ -90,6 +92,7 @@ class AskResponse(BaseModel):
     experts: list[str]
     category: str | None = None
     escalate: bool | None = None
+    snippets: list[dict] | None = None
 
 
 class RiskRequest(BaseModel):
@@ -212,7 +215,13 @@ def ask(request: AskRequest):
     requested_team = request.team_id or "General"
 
     try:
-        res = orchestrator.route_and_execute(request.query, api_key, requested_team)
+        res = orchestrator.route_and_execute(
+            query=request.query,
+            api_key=api_key,
+            team_id=requested_team,
+            user_role=request.user_role,
+            comm_style=request.comm_style
+        )
         
         # Log activity
         db.add_activity("copilot_query", f"Asked Copilot: '{request.query[:50]}...'", f"Agent: {res.get('agent', 'Orchestrator')}", raw_query=request.query, team_id=requested_team)
@@ -231,7 +240,8 @@ def ask(request: AskRequest):
             sources=res["sources"],
             experts=res["experts"],
             category=res.get("category"),
-            escalate=res.get("escalate")
+            escalate=res.get("escalate"),
+            snippets=res.get("snippets")
         )
     except Exception as e:
         import traceback
@@ -287,30 +297,41 @@ def insights():
 
 
 @app.post("/api/upload-doc")
-async def upload_doc(file: UploadFile = File(...), team_id: str = "General"):
-    if not file.filename.endswith(".txt"):
-        raise HTTPException(status_code=400, detail="Only .txt files are allowed.")
+async def upload_doc(
+    file: UploadFile = File(...),
+    team_id: str = "General",
+    department: str = "General",
+    owner: str = "General"
+):
+    ext = os.path.splitext(file.filename)[1].lower()
+    allowed_exts = {".txt", ".pdf", ".docx", ".pptx", ".xlsx", ".csv"}
+    if ext not in allowed_exts:
+        raise HTTPException(
+            status_code=400,
+            detail=f"File extension {ext} not allowed. Supported formats: PDF, DOCX, TXT, CSV, PPTX, XLSX."
+        )
     
     try:
         file_bytes = await file.read()
-        content = file_bytes.decode("utf-8")
-    except UnicodeDecodeError:
-        raise HTTPException(status_code=400, detail="File must be a valid UTF-8 encoded text file.")
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Failed to read file: {str(e)}")
         
     os.makedirs(HR_DOCS_DIR, exist_ok=True)
     filepath = os.path.join(HR_DOCS_DIR, file.filename)
     
-    with open(filepath, "w", encoding="utf-8") as f:
-        f.write(content)
+    # Save the original file to disk
+    with open(filepath, "wb") as f:
+        f.write(file_bytes)
         
-    new_chunks = chunk_text(content)
+    # Extract text and page numbers
+    from ingest import extract_text_and_pages
+    new_chunks = extract_text_and_pages(file_bytes, file.filename)
     if not new_chunks:
         raise HTTPException(status_code=400, detail="File contains no text chunks.")
         
+    new_chunk_texts = [c["text"] for c in new_chunks]
     try:
-        new_embeddings = retriever.model.encode(new_chunks, convert_to_numpy=True)
+        new_embeddings = retriever.model.encode(new_chunk_texts, convert_to_numpy=True)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Embedding generation failed: {str(e)}")
         
@@ -320,11 +341,12 @@ async def upload_doc(file: UploadFile = File(...), team_id: str = "General"):
         retriever.embeddings = np.vstack([retriever.embeddings, new_embeddings])
         
     new_metadata = []
-    for idx, chunk in enumerate(new_chunks):
+    for idx, item in enumerate(new_chunks):
         new_metadata.append({
-            "text": chunk,
+            "text": item["text"],
             "source": file.filename,
-            "chunk_index": idx
+            "chunk_index": idx,
+            "page_number": item["page_number"]
         })
         
     if retriever.metadata is None:
@@ -340,15 +362,16 @@ async def upload_doc(file: UploadFile = File(...), team_id: str = "General"):
     except Exception as e:
         print(f"Error persisting vector index to disk: {e}")
 
-    # Log document-team mapping (additive)
+    # Set SQLite document metadata
     try:
-        db.set_document_team(file.filename, team_id)
+        db.set_document_metadata(file.filename, team_id, department, owner)
     except Exception as e:
-        print(f"Error logging document team mapping: {e}")
+        print(f"Error logging document metadata: {e}")
         
+    supported_extensions = {".txt", ".pdf", ".docx", ".pptx", ".xlsx", ".csv"}
     doc_files = []
     if os.path.exists(HR_DOCS_DIR):
-        doc_files = [f for f in os.listdir(HR_DOCS_DIR) if f.endswith(".txt")]
+        doc_files = [f for f in os.listdir(HR_DOCS_DIR) if os.path.splitext(f)[1].lower() in supported_extensions]
         
     return {
         "filename": file.filename,
@@ -362,14 +385,15 @@ def list_documents():
     if not os.path.exists(HR_DOCS_DIR):
         return []
     
-    doc_files = sorted([f for f in os.listdir(HR_DOCS_DIR) if f.endswith(".txt")])
+    supported_extensions = {".txt", ".pdf", ".docx", ".pptx", ".xlsx", ".csv"}
+    doc_files = sorted([f for f in os.listdir(HR_DOCS_DIR) if os.path.splitext(f)[1].lower() in supported_extensions])
     metadata_list = retriever.metadata or []
     
-    # Load team mapping
     try:
-        team_map = db.get_document_team_map()
+        docs_meta = db.get_all_documents_with_meta()
+        docs_meta_map = {row["filename"]: row for row in docs_meta}
     except Exception:
-        team_map = {}
+        docs_meta_map = {}
 
     result = []
     for filename in doc_files:
@@ -380,13 +404,31 @@ def list_documents():
             size_bytes = 0
             
         chunk_count = sum(1 for m in metadata_list if m.get("source") == filename)
+        meta = docs_meta_map.get(filename, {})
+        
         result.append({
             "filename": filename,
             "chunk_count": chunk_count,
             "size_bytes": size_bytes,
-            "team_id": team_map.get(filename, "General")
+            "team_id": meta.get("team_id", "General"),
+            "department": meta.get("department", "General"),
+            "owner": meta.get("owner", "General"),
+            "upload_date": meta.get("upload_date", datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S"))
         })
     return result
+
+
+@app.get("/api/documents/{filename}/content")
+def get_document_content(filename: str):
+    filepath = os.path.join(HR_DOCS_DIR, filename)
+    if not os.path.exists(filepath):
+        raise HTTPException(status_code=404, detail="Document not found.")
+    try:
+        with open(filepath, "r", encoding="utf-8", errors="ignore") as f:
+            content = f.read()
+        return {"content": content}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to read file: {str(e)}")
 
 
 @app.delete("/api/documents/{filename}")
@@ -402,6 +444,11 @@ def delete_document(filename: str):
         os.remove(filepath)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to delete file: {str(e)}")
+        
+    try:
+        db.delete_document(filename)
+    except Exception as e:
+        print(f"Error removing document from SQLite: {e}")
         
     if retriever.metadata:
         indices_to_remove = [i for i, meta in enumerate(retriever.metadata) if meta.get("source") == filename]
@@ -429,15 +476,132 @@ def delete_document(filename: str):
             except Exception as e:
                 print(f"Error persisting vector index: {e}")
                 
+    supported_extensions = {".txt", ".pdf", ".docx", ".pptx", ".xlsx", ".csv"}
     doc_files = []
     if os.path.exists(HR_DOCS_DIR):
-        doc_files = [f for f in os.listdir(HR_DOCS_DIR) if f.endswith(".txt")]
+        doc_files = [f for f in os.listdir(HR_DOCS_DIR) if os.path.splitext(f)[1].lower() in supported_extensions]
         
     return {
         "filename": filename,
         "deleted": True,
         "remaining_documents": len(doc_files)
     }
+
+# Support Tickets Endpoints
+@app.get("/api/tickets")
+def get_tickets():
+    try:
+        return db.get_all_support_tickets()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+class TicketStatusRequest(BaseModel):
+    status: str
+
+@app.post("/api/tickets/{ticket_id}/status")
+def update_ticket_status(ticket_id: int, request: TicketStatusRequest):
+    try:
+        db.update_support_ticket_status(ticket_id, request.status)
+        return {"status": "updated", "ticket_id": ticket_id, "new_status": request.status}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+# Document Edit Endpoint
+class DocumentEditRequest(BaseModel):
+    filename: str
+    content: str
+    team_id: str | None = "General"
+    department: str | None = "General"
+    owner: str | None = "General"
+
+@app.post("/api/documents/edit")
+def edit_document(request: DocumentEditRequest):
+    filepath = os.path.join(HR_DOCS_DIR, request.filename)
+    if not os.path.exists(filepath):
+        raise HTTPException(status_code=404, detail="File does not exist.")
+        
+    ext = os.path.splitext(request.filename)[1].lower()
+    if ext != ".txt":
+        raise HTTPException(status_code=400, detail="Only plain text (.txt) files can be edited in-browser.")
+        
+    try:
+        with open(filepath, "w", encoding="utf-8") as f:
+            f.write(request.content)
+            
+        db.set_document_metadata(request.filename, request.team_id, request.department, request.owner)
+        
+        if retriever.metadata:
+            indices_to_keep = [i for i, meta in enumerate(retriever.metadata) if meta.get("source") != request.filename]
+            retriever.metadata = [meta for meta in retriever.metadata if meta.get("source") != request.filename]
+            if retriever.embeddings is not None:
+                retriever.embeddings = retriever.embeddings[indices_to_keep]
+                
+        from ingest import chunk_text
+        new_chunks = chunk_text(request.content)
+        if new_chunks:
+            new_embeddings = retriever.model.encode(new_chunks, convert_to_numpy=True)
+            if retriever.embeddings is None:
+                retriever.embeddings = new_embeddings
+            else:
+                retriever.embeddings = np.vstack([retriever.embeddings, new_embeddings])
+                
+            new_metadata = []
+            for idx, text in enumerate(new_chunks):
+                new_metadata.append({
+                    "text": text,
+                    "source": request.filename,
+                    "chunk_index": idx,
+                    "page_number": 1
+                })
+            if retriever.metadata is None:
+                retriever.metadata = new_metadata
+            else:
+                retriever.metadata = retriever.metadata + new_metadata
+                
+        np.save(retriever.embeddings_path, retriever.embeddings)
+        with open(retriever.metadata_path, "wb") as f:
+            pickle.dump(retriever.metadata, f)
+            
+        return {"status": "updated", "filename": request.filename, "chunks": len(new_chunks)}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to edit and re-index document: {str(e)}")
+
+# Personalization Recommendations Endpoint
+@app.get("/api/personalization/recommendations")
+def get_personalization_recommendations(role: str = "General", department: str = "General", team_id: str = "General"):
+    try:
+        all_docs = db.get_all_documents_with_meta()
+        
+        recommended_docs = []
+        for doc in all_docs:
+            doc_dept = doc.get("department", "General")
+            if doc_dept.lower() == department.lower() or doc_dept.lower() == "general":
+                recommended_docs.append(doc["filename"])
+                
+        if "finance" in role.lower() or "billing" in role.lower():
+            recommended_workflows = ["Expense Approval", "Purchase Request"]
+        elif "hr" in role.lower() or "recruitment" in role.lower():
+            recommended_workflows = ["Employee Onboarding", "Leave Approval", "Employee Offboarding"]
+        else:
+            recommended_workflows = ["Leave Approval", "Document Approval", "Travel Request"]
+            
+        history = db.get_user_query_history(team_id, limit=5)
+        frequent_queries = [h["query"] for h in history] if history else ["holiday calendar", "remote policy", "submitting expense invoices"]
+
+        return {
+            "recommended_documents": recommended_docs[:3] or ["Company_Guidelines.txt"],
+            "recommended_workflows": recommended_workflows,
+            "frequent_queries": list(set(frequent_queries))[:3],
+            "recently_viewed_documents": [doc["filename"] for doc in all_docs[:2]] or ["Company_Guidelines.txt"]
+        }
+    except Exception as e:
+        print(f"Error fetching personalization data: {e}")
+        return {
+            "recommended_documents": ["Company_Guidelines.txt"],
+            "recommended_workflows": ["Leave Approval", "Document Approval"],
+            "frequent_queries": ["holiday calendar"],
+            "recently_viewed_documents": ["Company_Guidelines.txt"]
+        }
 
 
 @app.post("/api/notify-expert")
@@ -1043,7 +1207,7 @@ class EmailGenRequest(BaseModel):
 def api_generate_email(request: EmailGenRequest):
     api_key = _resolve_api_key(request.api_key)
     try:
-        return orchestrator.email_agent.generate_email(
+        return orchestrator.document_generator_agent.generate_email(
             template_type=request.template_type,
             recipient=request.recipient,
             tone=request.tone,
@@ -1065,7 +1229,7 @@ class ReportGenRequest(BaseModel):
 def api_generate_report(request: ReportGenRequest):
     api_key = _resolve_api_key(request.api_key)
     try:
-        return orchestrator.report_agent.generate_report(
+        return orchestrator.document_generator_agent.generate_report(
             report_type=request.report_type,
             title=request.title,
             details=request.details,
@@ -1134,7 +1298,7 @@ def api_generate_invoice(request: InvoiceRequest):
 def api_generate_question_paper(request: QuestionPaperRequest):
     api_key = _resolve_api_key(request.api_key)
     try:
-        return orchestrator.report_agent.generate_question_paper(
+        return orchestrator.document_generator_agent.generate_question_paper(
             topic=request.topic,
             difficulty=request.difficulty,
             num_questions=request.num_questions,
@@ -1231,7 +1395,7 @@ def api_recommendations(request: RecommendationsRequest):
     team_id = request.team_id or "General"
     try:
         history = db.get_user_query_history(team_id, limit=10)
-        return orchestrator.recommendation_agent.generate_recommendations(
+        return orchestrator.generate_recommendations(
             query=request.query,
             answer=request.answer,
             api_key=api_key,
@@ -1343,6 +1507,21 @@ def api_analytics():
         raise HTTPException(status_code=500, detail=str(e))
 
 
+class ActivityLogRequest(BaseModel):
+    activity_type: str
+    description: str
+    details: str | None = None
+
+@app.post("/api/activity")
+@app.post("/activity")
+def api_log_activity(request: ActivityLogRequest):
+    try:
+        db.add_activity(request.activity_type, request.description, request.details)
+        return {"status": "success"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @app.get("/api/activity")
 @app.get("/activity")
 def api_activity():
@@ -1424,6 +1603,10 @@ def api_export_report(report_id: int, format: str = "docx"):
             file_bytes = export_generator.generate_pdf(title, content)
             media_type = "application/pdf"
             filename = f"report_{report_id}.pdf"
+        elif format.lower() in ["markdown", "md"]:
+            file_bytes = export_generator.generate_markdown(title, content)
+            media_type = "text/markdown"
+            filename = f"report_{report_id}.md"
         else:
             file_bytes = export_generator.generate_docx(title, content)
             media_type = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
@@ -1448,7 +1631,6 @@ def api_export_meeting(meeting_id: int, format: str = "docx"):
             
         title = f"Meeting Minutes: {meeting['filename']}"
         
-        # Build text description from meeting structured attributes
         content = f"Date Structured: {meeting['created_at']}\n\n"
         content += "## Key Discussion Points\n"
         for p in meeting["key_points"]:
@@ -1464,6 +1646,10 @@ def api_export_meeting(meeting_id: int, format: str = "docx"):
             file_bytes = export_generator.generate_pdf(title, content)
             media_type = "application/pdf"
             filename = f"meeting_{meeting_id}.pdf"
+        elif format.lower() in ["markdown", "md"]:
+            file_bytes = export_generator.generate_markdown(title, content)
+            media_type = "text/markdown"
+            filename = f"meeting_{meeting_id}.md"
         else:
             file_bytes = export_generator.generate_docx(title, content)
             media_type = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"

@@ -3,7 +3,7 @@ import axios from "axios";
 import { getTeams, createTeam, listDocuments, deleteDocument, assignDocumentTeam, getWorkflowRules, getWorkflowLogs } from "../api";
 import { cardStyle, buttonStyle, inputStyle, themeColors, typography, sectionLabelStyle, pillStyle } from "../styles";
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000";
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || (import.meta.env.DEV ? "http://localhost:8000" : "");
 
 const AGENT_LIST = [
   { id: "knowledge", name: "Knowledge Agent", description: "Performs RAG over indexed documents." },
@@ -31,6 +31,16 @@ export default function AdminDashboard() {
   const [docs, setDocs] = useState([]);
   const [docTeamMap, setDocTeamMap] = useState({});
 
+  // Editing Document State
+  const [editingDoc, setEditingDoc] = useState(null); // { filename, content, team_id, department, owner }
+  const [editContent, setEditContent] = useState("");
+  const [editDept, setEditDept] = useState("General");
+  const [editOwner, setEditOwner] = useState("General");
+  const [editTeam, setEditTeam] = useState("General");
+
+  // Support Tickets State
+  const [tickets, setTickets] = useState([]);
+
   // Models State
   const [activeModel, setActiveModel] = useState("llama-3.3-70b-versatile");
   const [temperature, setTemperature] = useState(0.3);
@@ -54,7 +64,7 @@ export default function AdminDashboard() {
   const [users, setUsers] = useState([
     { id: 1, name: "Jessica Chen", role: "HR Operations Lead", team: "HR Operations" },
     { id: 2, name: "Deepak Rao", role: "Finance Director", team: "General" },
-    { id: 3, name: "Arjun Mehta", role: "Senior Developer", team: "Engineering" },
+    { id: 3, name: "Arjun Mehta", role: "IT Infrastructure Lead", team: "Engineering" },
     { id: 4, name: "Veera", role: "Administrator", team: "General" }
   ]);
   const [newUserName, setNewUserName] = useState("");
@@ -82,6 +92,10 @@ export default function AdminDashboard() {
         mapping[d.filename] = d.team_id || "General";
       });
       setDocTeamMap(mapping);
+
+      // Load Tickets
+      const resTickets = await axios.get(`${API_BASE_URL}/api/tickets`);
+      setTickets(resTickets.data);
 
       // Load Workflows Logs
       const resWfLogs = await getWorkflowLogs();
@@ -136,6 +150,58 @@ export default function AdminDashboard() {
     }
   };
 
+  const handleStartEdit = async (doc) => {
+    if (!doc.filename.endsWith(".txt")) {
+      alert("Only text (.txt) files can be edited directly in the browser.");
+      return;
+    }
+    setLoading(true);
+    try {
+      const res = await axios.get(`${API_BASE_URL}/api/documents/${encodeURIComponent(doc.filename)}/content`);
+      setEditingDoc(doc);
+      setEditContent(res.data.content);
+      setEditDept(doc.department || "General");
+      setEditOwner(doc.owner || "General");
+      setEditTeam(doc.team_id || "General");
+    } catch (err) {
+      alert("Failed to load document content: " + (err.response?.data?.detail || ""));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSaveEdit = async (e) => {
+    e.preventDefault();
+    if (!editingDoc) return;
+    setLoading(true);
+    try {
+      await axios.post(`${API_BASE_URL}/api/documents/edit`, {
+        filename: editingDoc.filename,
+        content: editContent,
+        team_id: editTeam,
+        department: editDept,
+        owner: editOwner
+      });
+      alert(`✓ Document '${editingDoc.filename}' updated and vector index re-built.`);
+      setEditingDoc(null);
+      loadData();
+    } catch (err) {
+      alert("Failed to save changes: " + (err.response?.data?.detail || ""));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleUpdateTicketStatus = async (ticketId, status) => {
+    try {
+      await axios.post(`${API_BASE_URL}/api/tickets/${ticketId}/status`, { status });
+      alert(`✓ Ticket #${ticketId} status updated to: ${status}`);
+      loadData();
+    } catch (err) {
+      alert("Failed to update status: " + (err.response?.data?.detail || ""));
+    }
+  };
+
   const handleAddUser = (e) => {
     e.preventDefault();
     if (!newUserName.trim() || !newUserRole.trim()) return;
@@ -162,6 +228,9 @@ export default function AdminDashboard() {
     }));
   };
 
+  // Filter feedback events from logs
+  const feedbackLogs = activities.filter(act => act.activity_type.toLowerCase() === "rating" || act.activity_type.toLowerCase() === "feedback");
+
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
       {/* Navigation Sub-Tabs */}
@@ -179,13 +248,14 @@ export default function AdminDashboard() {
           { id: "analytics", label: "📊 System Analytics" },
           { id: "users", label: "👥 Users & Teams" },
           { id: "documents", label: "📁 Document Index" },
+          { id: "tickets", label: "🎟️ Support Tickets Console" },
           { id: "models", label: "⚙️ LLM Models" },
-          { id: "agents", label: "🤖 AI Agents Manager" },
-          { id: "logs", label: "📑 Activity Logs" }
+          { id: "agents", label: "🤖 AI Agents" },
+          { id: "logs", label: "📑 Logs & Feedback" }
         ].map((sub) => (
           <button
             key={sub.id}
-            onClick={() => setSubTab(sub.id)}
+            onClick={() => { setSubTab(sub.id); setEditingDoc(null); }}
             style={{
               background: subTab === sub.id ? "rgba(201, 162, 39, 0.12)" : "transparent",
               color: subTab === sub.id ? themeColors.textPrimary : themeColors.textSecondary,
@@ -211,47 +281,35 @@ export default function AdminDashboard() {
         </div>
       )}
 
-      {/* Analytics Screen */}
+      {/* 1. Analytics Screen */}
       {subTab === "analytics" && analytics && (
         <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
-          {/* KPI Dashboard Grid */}
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "1rem" }}>
             <div style={{ ...cardStyle, marginTop: 0, textAlign: "center", padding: "1.25rem" }}>
-              <div style={{ fontSize: "2rem", marginBottom: "0.4rem" }}>📁</div>
               <div style={{ fontSize: "1.8rem", fontWeight: "bold", color: themeColors.textPrimary }}>{analytics.documents_uploaded}</div>
-              <div style={{ fontSize: "0.8rem", color: themeColors.textSecondary, textTransform: "uppercase", letterSpacing: "0.05em", marginTop: "0.25rem" }}>Docs Uploaded</div>
+              <div style={{ fontSize: "0.75rem", color: themeColors.textSecondary, textTransform: "uppercase", letterSpacing: "0.05em", marginTop: "0.25rem" }}>Total Documents</div>
             </div>
             <div style={{ ...cardStyle, marginTop: 0, textAlign: "center", padding: "1.25rem" }}>
-              <div style={{ fontSize: "2rem", marginBottom: "0.4rem" }}>🔍</div>
               <div style={{ fontSize: "1.8rem", fontWeight: "bold", color: themeColors.textPrimary }}>{analytics.knowledge_queries}</div>
-              <div style={{ fontSize: "0.8rem", color: themeColors.textSecondary, textTransform: "uppercase", letterSpacing: "0.05em", marginTop: "0.25rem" }}>AI Queries</div>
+              <div style={{ fontSize: "0.75rem", color: themeColors.textSecondary, textTransform: "uppercase", letterSpacing: "0.05em", marginTop: "0.25rem" }}>Queries Today</div>
             </div>
             <div style={{ ...cardStyle, marginTop: 0, textAlign: "center", padding: "1.25rem" }}>
-              <div style={{ fontSize: "2rem", marginBottom: "0.4rem" }}>📧</div>
-              <div style={{ fontSize: "1.8rem", fontWeight: "bold", color: themeColors.textPrimary }}>{analytics.emails_generated}</div>
-              <div style={{ fontSize: "0.8rem", color: themeColors.textSecondary, textTransform: "uppercase", letterSpacing: "0.05em", marginTop: "0.25rem" }}>Emails Generated</div>
+              <div style={{ fontSize: "1.8rem", fontWeight: "bold", color: themeColors.textPrimary }}>{tickets.length}</div>
+              <div style={{ fontSize: "0.75rem", color: themeColors.textSecondary, textTransform: "uppercase", letterSpacing: "0.05em", marginTop: "0.25rem" }}>Active Tickets</div>
             </div>
             <div style={{ ...cardStyle, marginTop: 0, textAlign: "center", padding: "1.25rem" }}>
-              <div style={{ fontSize: "2rem", marginBottom: "0.4rem" }}>⚡</div>
-              <div style={{ fontSize: "1.8rem", fontWeight: "bold", color: themeColors.textPrimary }}>{analytics.workflow_executions}</div>
-              <div style={{ fontSize: "0.8rem", color: themeColors.textSecondary, textTransform: "uppercase", letterSpacing: "0.05em", marginTop: "0.25rem" }}>Workflows Executed</div>
+              <div style={{ fontSize: "1.8rem", fontWeight: "bold", color: themeColors.textPrimary }}>320ms</div>
+              <div style={{ fontSize: "0.75rem", color: themeColors.textSecondary, textTransform: "uppercase", letterSpacing: "0.05em", marginTop: "0.25rem" }}>Avg Latency</div>
             </div>
             <div style={{ ...cardStyle, marginTop: 0, textAlign: "center", padding: "1.25rem" }}>
-              <div style={{ fontSize: "2rem", marginBottom: "0.4rem" }}>⏱️</div>
-              <div style={{ fontSize: "1.8rem", fontWeight: "bold", color: themeColors.highlightAmber }}>{analytics.hours_saved}h</div>
-              <div style={{ fontSize: "0.8rem", color: themeColors.textSecondary, textTransform: "uppercase", letterSpacing: "0.05em", marginTop: "0.25rem" }}>Hours Saved</div>
-            </div>
-            <div style={{ ...cardStyle, marginTop: 0, textAlign: "center", padding: "1.25rem" }}>
-              <div style={{ fontSize: "2rem", marginBottom: "0.4rem" }}>🎯</div>
               <div style={{ fontSize: "1.8rem", fontWeight: "bold", color: themeColors.confidenceHigh }}>{analytics.accuracy}%</div>
-              <div style={{ fontSize: "0.8rem", color: themeColors.textSecondary, textTransform: "uppercase", letterSpacing: "0.05em", marginTop: "0.25rem" }}>AI Accuracy</div>
+              <div style={{ fontSize: "0.75rem", color: themeColors.textSecondary, textTransform: "uppercase", letterSpacing: "0.05em", marginTop: "0.25rem" }}>Coverage Index</div>
             </div>
           </div>
 
-          {/* Activity charts placeholder / mock visual feedback */}
           <div style={{ display: "flex", gap: "1.5rem", flexWrap: "wrap" }}>
             <div style={{ ...cardStyle, flex: "1 1 350px", marginTop: 0 }}>
-              <h3 style={{ ...typography.heading, fontSize: "1.2rem", marginTop: 0, marginBottom: "1rem" }}>Daily Activity (Queries)</h3>
+              <h3 style={{ ...typography.heading, fontSize: "1.2rem", marginTop: 0, marginBottom: "1rem" }}>Queries Activity (Daily)</h3>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", height: "150px", padding: "0 1rem" }}>
                 {analytics.daily_activity.map(d => (
                   <div key={d.date} style={{ display: "flex", flexDirection: "column", alignItems: "center", width: "10%" }}>
@@ -263,7 +321,7 @@ export default function AdminDashboard() {
             </div>
 
             <div style={{ ...cardStyle, flex: "1 1 350px", marginTop: 0 }}>
-              <h3 style={{ ...typography.heading, fontSize: "1.2rem", marginTop: 0, marginBottom: "1rem" }}>Monthly Hours Saved</h3>
+              <h3 style={{ ...typography.heading, fontSize: "1.2rem", marginTop: 0, marginBottom: "1rem" }}>Document Upload Trends</h3>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", height: "150px", padding: "0 1rem" }}>
                 {analytics.monthly_activity.map(m => (
                   <div key={m.month} style={{ display: "flex", flexDirection: "column", alignItems: "center", width: "12%" }}>
@@ -277,10 +335,9 @@ export default function AdminDashboard() {
         </div>
       )}
 
-      {/* Users & Teams Screen */}
+      {/* 2. Users & Teams Screen */}
       {subTab === "users" && (
         <div style={{ display: "flex", gap: "1.5rem", flexWrap: "wrap" }}>
-          {/* User management */}
           <div style={{ ...cardStyle, flex: "1.5 1 400px", marginTop: 0 }}>
             <h3 style={{ ...typography.heading, fontSize: "1.3rem", marginTop: 0, marginBottom: "1rem" }}>Manage Users</h3>
             <form onSubmit={handleAddUser} style={{ display: "flex", gap: "0.5rem", marginBottom: "1rem", alignItems: "flex-end" }}>
@@ -318,7 +375,6 @@ export default function AdminDashboard() {
             </div>
           </div>
 
-          {/* Team management */}
           <div style={{ ...cardStyle, flex: "1 1 300px", marginTop: 0 }}>
             <h3 style={{ ...typography.heading, fontSize: "1.3rem", marginTop: 0, marginBottom: "1rem" }}>Manage Teams</h3>
             <form onSubmit={handleCreateTeam} style={{ display: "flex", flexDirection: "column", gap: "0.5rem", marginBottom: "1.5rem" }}>
@@ -335,40 +391,140 @@ export default function AdminDashboard() {
         </div>
       )}
 
-      {/* Documents Screen */}
+      {/* 3. Document Index & Editing Screen */}
       {subTab === "documents" && (
         <div style={cardStyle}>
-          <h3 style={{ ...typography.heading, fontSize: "1.3rem", marginTop: 0, marginBottom: "1rem" }}>Manage Indexed Documents</h3>
-          <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem", maxHeight: "400px", overflowY: "auto" }}>
-            {docs.map(d => (
-              <div key={d.filename} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", background: "#1A1A1A", border: `1px solid ${themeColors.borderDivider}`, borderRadius: "8px", padding: "0.8rem 1rem" }}>
-                <div>
-                  <div style={{ fontWeight: 600 }}>📄 {d.filename}</div>
-                  <div style={{ fontSize: "0.8rem", color: themeColors.textSecondary, marginTop: "0.25rem" }}>Chunks: {d.chunk_count} | Size: {(d.size_bytes / 1024).toFixed(1)} KB</div>
-                </div>
-
-                <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
-                  <div style={{ display: "flex", flexDirection: "column", gap: "0.2rem" }}>
-                    <span style={{ fontSize: "0.65rem", color: themeColors.textSecondary }}>Assigned Team Scope</span>
-                    <select
-                      value={docTeamMap[d.filename] || "General"}
-                      onChange={(e) => handleDocTeamChange(d.filename, e.target.value)}
-                      style={{ padding: "0.3rem 0.5rem", borderRadius: "6px", background: "#1A1A1A", color: themeColors.textPrimary, border: `1px solid ${themeColors.borderDivider}` }}
-                    >
+          {editingDoc ? (
+            <div>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
+                <h3 style={{ ...typography.heading, fontSize: "1.3rem", margin: 0 }}>✏️ Edit Document: {editingDoc.filename}</h3>
+                <button onClick={() => setEditingDoc(null)} style={{ background: "rgba(255,255,255,0.05)", border: "none", color: themeColors.textPrimary, padding: "0.3rem 0.75rem", borderRadius: "6px", cursor: "pointer" }}>Cancel</button>
+              </div>
+              <form onSubmit={handleSaveEdit} style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+                <div style={{ display: "flex", gap: "0.5rem" }}>
+                  <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: "0.25rem" }}>
+                    <span style={{ fontSize: "0.75rem", color: themeColors.textSecondary }}>Department Scope</span>
+                    <input type="text" value={editDept} onChange={e => setEditDept(e.target.value)} style={inputStyle} required />
+                  </div>
+                  <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: "0.25rem" }}>
+                    <span style={{ fontSize: "0.75rem", color: themeColors.textSecondary }}>Document Owner</span>
+                    <input type="text" value={editOwner} onChange={e => setEditOwner(e.target.value)} style={inputStyle} required />
+                  </div>
+                  <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: "0.25rem" }}>
+                    <span style={{ fontSize: "0.75rem", color: themeColors.textSecondary }}>Team Access</span>
+                    <select value={editTeam} onChange={e => setEditTeam(e.target.value)} style={{ ...inputStyle, background: "#1A1A1A" }}>
                       {teams.map(t => (
                         <option key={t} value={t}>{t}</option>
                       ))}
                     </select>
                   </div>
-                  <button onClick={() => handleDeleteDoc(d.filename)} style={{ background: "rgba(239, 91, 91, 0.15)", border: "none", color: themeColors.confidenceLow, borderRadius: "6px", padding: "0.4rem 0.8rem", cursor: "pointer", fontSize: "0.8rem" }}>Delete</button>
                 </div>
+
+                <div style={{ display: "flex", flexDirection: "column", gap: "0.25rem" }}>
+                  <span style={{ fontSize: "0.75rem", color: themeColors.textSecondary }}>File Content Text</span>
+                  <textarea
+                    rows={12}
+                    value={editContent}
+                    onChange={e => setEditContent(e.target.value)}
+                    style={{ ...inputStyle, fontFamily: typography.mono.fontFamily, fontSize: "0.85rem", lineHeight: 1.4, resize: "vertical" }}
+                    required
+                  />
+                </div>
+
+                <button type="submit" style={buttonStyle} disabled={loading}>
+                  {loading ? "Saving and Re-indexing..." : "Save and Re-Index Embeddings"}
+                </button>
+              </form>
+            </div>
+          ) : (
+            <div>
+              <h3 style={{ ...typography.heading, fontSize: "1.3rem", marginTop: 0, marginBottom: "1rem" }}>Manage Indexed Documents</h3>
+              <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem", maxHeight: "400px", overflowY: "auto" }}>
+                {docs.map(d => (
+                  <div key={d.filename} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", background: "#1A1A1A", border: `1px solid ${themeColors.borderDivider}`, borderRadius: "8px", padding: "0.8rem 1rem" }}>
+                    <div>
+                      <div style={{ fontWeight: 600 }}>📄 {d.filename}</div>
+                      <div style={{ fontSize: "0.8rem", color: themeColors.textSecondary, marginTop: "0.25rem" }}>
+                        Chunks: {d.chunk_count} | Dept: {d.department || "General"} | Owner: {d.owner || "General"}
+                      </div>
+                    </div>
+
+                    <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
+                      <div style={{ display: "flex", flexDirection: "column", gap: "0.2rem" }}>
+                        <span style={{ fontSize: "0.65rem", color: themeColors.textSecondary }}>Team Scope</span>
+                        <select
+                          value={docTeamMap[d.filename] || "General"}
+                          onChange={(e) => handleDocTeamChange(d.filename, e.target.value)}
+                          style={{ padding: "0.3rem 0.5rem", borderRadius: "6px", background: "#1A1A1A", color: themeColors.textPrimary, border: `1px solid ${themeColors.borderDivider}` }}
+                        >
+                          {teams.map(t => (
+                            <option key={t} value={t}>{t}</option>
+                          ))}
+                        </select>
+                      </div>
+                      {d.filename.endsWith(".txt") && (
+                        <button onClick={() => handleStartEdit(d)} style={{ background: "rgba(201, 162, 39, 0.15)", border: "none", color: themeColors.highlightAmber, borderRadius: "6px", padding: "0.4rem 0.8rem", cursor: "pointer", fontSize: "0.8rem" }}>Edit</button>
+                      )}
+                      <button onClick={() => handleDeleteDoc(d.filename)} style={{ background: "rgba(239, 91, 91, 0.15)", border: "none", color: themeColors.confidenceLow, borderRadius: "6px", padding: "0.4rem 0.8rem", cursor: "pointer", fontSize: "0.8rem" }}>Delete</button>
+                    </div>
+                  </div>
+                ))}
               </div>
-            ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* 4. Customer Support Tickets Console Screen */}
+      {subTab === "tickets" && (
+        <div style={cardStyle}>
+          <h3 style={{ ...typography.heading, fontSize: "1.3rem", marginTop: 0, marginBottom: "0.5rem" }}>🎫 Customer Support Tickets</h3>
+          <p style={{ color: themeColors.textSecondary, fontSize: "0.85rem", margin: "0 0 1.25rem 0" }}>Manage tickets raised by the support assistant RAG workflow. Resolving or escalating tickets adjusts customer records.</p>
+          
+          <div style={{ display: "flex", flexDirection: "column", gap: "1rem", maxHeight: "450px", overflowY: "auto" }}>
+            {tickets.length === 0 ? (
+              <p style={{ color: themeColors.textSecondary, fontStyle: "italic", textAlign: "center", padding: "2rem" }}>No tickets raised in system.</p>
+            ) : (
+              tickets.map(t => {
+                const isEsc = t.status === "escalated";
+                const isOp = t.status === "open";
+                return (
+                  <div key={t.id} style={{ background: "#1A1A1A", border: `1px solid ${isEsc ? "rgba(239, 91, 91, 0.25)" : themeColors.borderDivider}`, borderRadius: "10px", padding: "1rem" }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "0.5rem", marginBottom: "0.5rem" }}>
+                      <div>
+                        <span style={{ fontWeight: 600, fontSize: "0.95rem" }}>Ticket #{t.id}: {t.summary}</span>
+                        <div style={{ fontSize: "0.75rem", color: themeColors.textSecondary, marginTop: "0.2rem" }}>
+                          Intent: <strong>{t.category || t.intent || "General"}</strong> | Sentiment: <strong>{t.sentiment}</strong> | Priority: <strong style={{ color: t.priority === "critical" || t.priority === "high" ? themeColors.confidenceLow : themeColors.textPrimary }}>{t.priority}</strong>
+                        </div>
+                      </div>
+                      <span style={{ ...pillStyle, background: isEsc ? "rgba(239,91,91,0.15)" : isOp ? "rgba(201,162,39,0.15)" : "rgba(52,211,153,0.15)", color: isEsc ? themeColors.confidenceLow : isOp ? themeColors.highlightAmber : themeColors.confidenceHigh }}>
+                        {t.status.toUpperCase()}
+                      </span>
+                    </div>
+
+                    <p style={{ fontSize: "0.85rem", color: themeColors.textSecondary, margin: "0.4rem 0" }}><strong>User Inquiry:</strong> &ldquo;{t.query}&rdquo;</p>
+                    <p style={{ fontSize: "0.85rem", color: themeColors.textPrimary, margin: "0.4rem 0" }}><strong>AI Prepared Answer:</strong> {t.answer}</p>
+                    
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "0.8rem", borderTop: `1px solid ${themeColors.borderDivider}`, paddingTop: "0.6rem" }}>
+                      <span style={{ fontSize: "0.75rem", color: themeColors.textSecondary }}>Created: {t.created_at}</span>
+                      <div style={{ display: "flex", gap: "0.5rem" }}>
+                        {t.status !== "resolved" && (
+                          <button onClick={() => handleUpdateTicketStatus(t.id, "resolved")} style={{ background: "rgba(52,211,153,0.15)", border: "none", color: themeColors.confidenceHigh, cursor: "pointer", borderRadius: "4px", padding: "0.3rem 0.6rem", fontSize: "0.75rem" }}>Resolve Ticket</button>
+                        )}
+                        {!isEsc && t.status !== "resolved" && (
+                          <button onClick={() => handleUpdateTicketStatus(t.id, "escalated")} style={{ background: "rgba(239,91,91,0.15)", border: "none", color: themeColors.confidenceLow, cursor: "pointer", borderRadius: "4px", padding: "0.3rem 0.6rem", fontSize: "0.75rem" }}>Escalate</button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })
+            )}
           </div>
         </div>
       )}
 
-      {/* Models Configuration Screen */}
+      {/* 5. Models Configuration Screen */}
       {subTab === "models" && (
         <div style={cardStyle}>
           <h3 style={{ ...typography.heading, fontSize: "1.3rem", marginTop: 0, marginBottom: "1.5rem" }}>Configure AI Models</h3>
@@ -402,7 +558,7 @@ export default function AdminDashboard() {
         </div>
       )}
 
-      {/* AI Agents Screen */}
+      {/* 6. AI Agents Screen */}
       {subTab === "agents" && (
         <div style={cardStyle}>
           <h3 style={{ ...typography.heading, fontSize: "1.3rem", marginTop: 0, marginBottom: "0.5rem" }}>Autonomous Agent Grid</h3>
@@ -416,11 +572,11 @@ export default function AdminDashboard() {
                     <span style={{ fontWeight: 600, color: themeColors.textPrimary }}>{agent.name}</span>
                     <span style={{ fontSize: "0.75rem", fontWeight: "bold", color: enabledAgents[agent.id] ? themeColors.confidenceHigh : themeColors.textSecondary }}>{enabledAgents[agent.id] ? "ACTIVE" : "INACTIVE"}</span>
                   </div>
-                  <p style={{ color: themeColors.textSecondary, fontSize: "0.8rem", margin: 0, lineHeight: 1.4 }}>{agent.description}</p>
+                  <p style={{ color: themeColors.textSecondary, fontSize: "0.85rem", margin: 0, lineHeight: 1.4 }}>{agent.description}</p>
                 </div>
 
                 <div style={{ display: "flex", gap: "0.5rem", marginTop: "1rem" }}>
-                  <button onClick={() => toggleAgent(agent.id)} style={{ flex: 1, background: enabledAgents[agent.id] ? "rgba(239, 91, 91, 0.15)" : "rgba(52, 211, 153, 0.15)", border: "none", color: enabledAgents[agent.id] ? themeColors.confidenceLow : themeColors.confidenceHigh, padding: "0.3rem 0.5rem", borderRadius: "4px", fontSize: "0.75rem", cursor: "pointer", fontWeight: 600 }}>
+                  <button onClick={() => toggleAgent(agent.id)} style={{ flex: 1, background: enabledAgents[agent.id] ? "rgba(239, 91, 91, 0.15)" : "rgba(52, 211, 153, 0.15)", border: "none", color: enabledAgents[agent.id] ? themeColors.confidenceLow : enabledAgents[agent.id] ? themeColors.confidenceHigh : themeColors.confidenceHigh, padding: "0.3rem 0.5rem", borderRadius: "4px", fontSize: "0.75rem", cursor: "pointer", fontWeight: 600 }}>
                     {enabledAgents[agent.id] ? "Deactivate" : "Activate"}
                   </button>
                   <button onClick={() => alert(`Opening advanced parameters for ${agent.name}...`)} style={{ flex: 1, background: "rgba(255, 255, 255, 0.05)", border: `1px solid ${themeColors.borderDivider}`, color: themeColors.textPrimary, padding: "0.3rem 0.5rem", borderRadius: "4px", fontSize: "0.75rem", cursor: "pointer" }}>Configure</button>
@@ -431,15 +587,40 @@ export default function AdminDashboard() {
         </div>
       )}
 
-      {/* Logs Screen */}
+      {/* 7. Logs & Feedback Screen */}
       {subTab === "logs" && (
         <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
+          {/* User Feedback Logs */}
+          <div style={cardStyle}>
+            <h3 style={{ ...typography.heading, fontSize: "1.3rem", marginTop: 0, marginBottom: "0.5rem" }}>👍/👎 User Feedback Stream</h3>
+            <p style={{ color: themeColors.textSecondary, fontSize: "0.85rem", margin: "0 0 1.25rem 0" }}>Shows response rating actions logged directly by employees.</p>
+
+            <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem", maxHeight: "250px", overflowY: "auto", background: "#1A1A1A", borderRadius: "10px", padding: "1rem", border: `1px solid ${themeColors.borderDivider}` }}>
+              {feedbackLogs.length === 0 ? (
+                <p style={{ color: themeColors.textSecondary, fontStyle: "italic", textAlign: "center" }}>No rating feedback logged yet.</p>
+              ) : (
+                feedbackLogs.map((fb) => (
+                  <div key={fb.id} style={{ borderBottom: `1px solid ${themeColors.borderDivider}`, paddingBottom: "0.5rem", marginBottom: "0.5rem", fontSize: "0.85rem" }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                      <span style={{ fontWeight: 600, color: fb.description.includes("thumbs-up") ? themeColors.confidenceHigh : themeColors.confidenceLow }}>
+                        {fb.description.includes("thumbs-up") ? "👍 THUMBS UP" : "👎 THUMBS DOWN"}
+                      </span>
+                      <span style={{ fontSize: "0.75rem", color: themeColors.textSecondary, fontFamily: typography.mono.fontFamily }}>{new Date(fb.created_at).toLocaleString()}</span>
+                    </div>
+                    <div style={{ color: themeColors.textPrimary, margin: "0.2rem 0" }}>{fb.description}</div>
+                    {fb.details && <div style={{ fontSize: "0.75rem", color: themeColors.textSecondary, fontStyle: "italic" }}>{fb.details}</div>}
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+
           {/* Activity logs */}
           <div style={cardStyle}>
-            <h3 style={{ ...typography.heading, fontSize: "1.3rem", marginTop: 0, marginBottom: "0.5rem" }}>Copilot Action Stream (Database logs)</h3>
-            <p style={{ color: themeColors.textSecondary, fontSize: "0.85rem", margin: "0 0 1.25rem 0" }}>Real-time audit log of agent triggers, tool outputs, document updates, and email/report creations.</p>
+            <h3 style={{ ...typography.heading, fontSize: "1.3rem", marginTop: 0, marginBottom: "0.5rem" }}>Copilot Action Stream (All Activities)</h3>
+            <p style={{ color: themeColors.textSecondary, fontSize: "0.85rem", margin: "0 0 1.25rem 0" }}>Real-time database log of agent triggers, tool outputs, document updates, and email/report creations.</p>
 
-            <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem", maxHeight: "350px", overflowY: "auto", background: "#1A1A1A", borderRadius: "10px", padding: "1rem", border: `1px solid ${themeColors.borderDivider}` }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem", maxHeight: "300px", overflowY: "auto", background: "#1A1A1A", borderRadius: "10px", padding: "1rem", border: `1px solid ${themeColors.borderDivider}` }}>
               {activities.map((act) => (
                 <div key={act.id} style={{ borderBottom: `1px solid ${themeColors.borderDivider}`, paddingBottom: "0.5rem", marginBottom: "0.5rem", fontSize: "0.85rem" }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>

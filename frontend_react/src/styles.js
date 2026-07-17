@@ -1,37 +1,37 @@
-// MindVault AI Purple/Amber Theme Styles
+// Premium Dark Mode Gold/Amber Theme Design System (Apple / Vercel style in Dark Mode)
 
 export const themeColors = {
-  bgBase: "#161616",
-  panelSurface: "#1F1F1F",
-  panelSurfaceRaised: "#232323",
-  borderDivider: "#333333",
-  accentPrimary: "#C9A227",          // gold accent
-  highlightAmber: "#C9A227",         // kept for backward-compatibility, now gold
+  bgBase: "#121212",
+  panelSurface: "#1A1A1A",
+  panelSurfaceRaised: "#222222",
+  borderDivider: "#2A2A2A",
+  accentPrimary: "#C9A227",          // Premium Gold
+  highlightAmber: "#C9A227",         // Premium Gold
   textPrimary: "#F2F2F0",
-  textSecondary: "#8A8A8A",
-  success: "#5FA777",                // muted sage
-  danger: "#C9524F",                 // muted brick-red
+  textSecondary: "#8A8A8A",          // Muted Silver Gray
+  success: "#10B981",
+  danger: "#EF4444",
   dangerAdminBadge: "#4A2020",
-  confidenceHigh: "#5FA777",
-  confidenceMedium: "#C9A227",
-  confidenceLow: "#C9524F",
-  badgeViolet: "#232323",
-  badgeAmber: "#282828",
+  confidenceHigh: "#10B981",
+  confidenceMedium: "#F59E0B",
+  confidenceLow: "#EF4444",
+  badgeViolet: "#2D2D2D",
+  badgeAmber: "#3A331A",
 };
 
 export const typography = {
   heading: {
-    fontFamily: "'Lora', 'Source Serif 4', Georgia, serif",
-    fontWeight: "700",
+    fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif",
+    fontWeight: "600",
     color: themeColors.textPrimary,
   },
   body: {
-    fontFamily: "'Inter', sans-serif",
+    fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif",
     fontWeight: "400",
     color: themeColors.textPrimary,
   },
   mono: {
-    fontFamily: "'JetBrains Mono', 'Courier New', monospace",
+    fontFamily: "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace",
     fontWeight: "400",
     fontSize: "0.85rem",
   }
@@ -39,35 +39,36 @@ export const typography = {
 
 export const inputStyle = {
   width: "100%",
-  padding: "0.8rem 1.2rem",
-  borderRadius: "10px",
+  padding: "1rem 1.25rem",
+  borderRadius: "16px",
   border: `1px solid ${themeColors.borderDivider}`,
-  background: "#1A1A1A",
+  background: "#1E1E1E",
   color: themeColors.textPrimary,
   fontSize: "0.95rem",
   boxSizing: "border-box",
   outline: "none",
   fontFamily: typography.body.fontFamily,
-  transition: "border-color 0.2s ease-in-out, box-shadow 0.2s ease-in-out",
+  transition: "border-color 0.25s ease, box-shadow 0.25s ease",
+  boxShadow: "0 2px 4px rgba(0, 0, 0, 0.05)",
   ":focus": {
     borderColor: themeColors.accentPrimary,
-    boxShadow: `0 0 0 2px ${themeColors.accentPrimary}33`
+    boxShadow: `0 0 0 3px rgba(201, 162, 39, 0.15)`
   }
 };
 
 export const buttonStyle = {
   marginTop: "1rem",
-  padding: "0.75rem 1.8rem",
-  borderRadius: "10px",
-  border: "none",
-  background: `linear-gradient(135deg, ${themeColors.accentPrimary} 0%, #7A5B0B 100%)`,
-  color: themeColors.bgBase,
+  padding: "0.8rem 1.8rem",
+  borderRadius: "16px",
+  border: `1px solid ${themeColors.borderDivider}`,
+  background: "#FFFFFF",
+  color: "#121212",
   fontWeight: 600,
   fontSize: "0.95rem",
   cursor: "pointer",
   fontFamily: typography.body.fontFamily,
-  transition: "transform 0.1s ease, filter 0.2s ease",
-  boxShadow: "0 4px 12px rgba(0, 0, 0, 0.15)",
+  transition: "all 0.2s ease",
+  boxShadow: "0 2px 6px rgba(0, 0, 0, 0.1)",
 };
 
 export const linkButtonStyle = {
@@ -86,29 +87,29 @@ export const linkButtonStyle = {
 export const cardStyle = {
   background: themeColors.panelSurface,
   border: `1px solid ${themeColors.borderDivider}`,
-  borderRadius: "14px",
-  padding: "1.75rem",
-  marginTop: "1.25rem",
-  boxShadow: "0 6px 20px rgba(0,0,0,0.25)",
-  animation: "fadeInSlide 0.3s ease-out forwards",
+  borderRadius: "16px",
+  padding: "2rem",
+  marginTop: "1.5rem",
+  boxShadow: "0 4px 20px rgba(0, 0, 0, 0.2)",
+  boxSizing: "border-box",
 };
 
 export const sectionLabelStyle = {
   fontFamily: typography.mono.fontFamily,
-  fontSize: "0.7rem",
+  fontSize: "0.75rem",
   textTransform: "uppercase",
   letterSpacing: "0.06em",
-  color: themeColors.highlightAmber,
+  color: themeColors.textSecondary,
   margin: "0 0 0.5rem 0",
 };
 
 export const pillStyle = {
-  background: "rgba(201, 162, 39, 0.12)",
+  background: "#222222",
   border: `1px solid ${themeColors.borderDivider}`,
   padding: "0.3rem 0.7rem",
   borderRadius: "8px",
   fontSize: "0.8rem",
-  color: themeColors.textPrimary,
+  color: themeColors.textSecondary,
   fontFamily: typography.mono.fontFamily,
 };
 
@@ -116,23 +117,23 @@ export function confidenceStyle(score) {
   if (score >= 80) {
     return {
       color: themeColors.confidenceHigh,
-      bg: "rgba(95, 167, 119, 0.1)",
-      border: `1px solid ${themeColors.confidenceHigh}55`,
+      bg: "rgba(16, 185, 129, 0.08)",
+      border: `1px solid rgba(16, 185, 129, 0.25)`,
       label: "High Confidence"
     };
   }
   if (score >= 40) {
     return {
       color: themeColors.confidenceMedium,
-      bg: "rgba(201, 162, 39, 0.1)",
-      border: `1px solid ${themeColors.confidenceMedium}55`,
+      bg: "rgba(245, 158, 11, 0.08)",
+      border: `1px solid rgba(245, 158, 11, 0.25)`,
       label: "Medium Confidence"
     };
   }
   return {
     color: themeColors.confidenceLow,
-    bg: "rgba(201, 82, 79, 0.1)",
-    border: `1px solid ${themeColors.confidenceLow}55`,
+    bg: "rgba(239, 68, 68, 0.08)",
+    border: `1px solid rgba(239, 68, 68, 0.25)`,
     label: "Low Confidence"
   };
 }
@@ -140,7 +141,7 @@ export function confidenceStyle(score) {
 export const kpiCardStyle = {
   background: themeColors.panelSurface,
   border: `1px solid ${themeColors.borderDivider}`,
-  borderRadius: "12px",
+  borderRadius: "16px",
   padding: "1.5rem",
   textAlign: "center",
   flex: 1,
@@ -148,11 +149,11 @@ export const kpiCardStyle = {
 };
 
 export const spacing = {
-  xs: "0.4rem",
-  sm: "0.75rem",
-  md: "1.25rem",
-  lg: "2rem",
-  xl: "3rem",
+  xs: "0.5rem",
+  sm: "0.8rem",
+  md: "1.5rem",
+  lg: "2.5rem",
+  xl: "3.5rem",
 };
 
 export const radius = {

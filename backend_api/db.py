@@ -24,7 +24,7 @@ def init_db():
         )
     """)
     
-    # Insert default team if not exists
+    # Insert default teams
     cursor.execute("INSERT OR IGNORE INTO teams (name) VALUES ('General')")
     cursor.execute("INSERT OR IGNORE INTO teams (name) VALUES ('Engineering')")
     cursor.execute("INSERT OR IGNORE INTO teams (name) VALUES ('HR Operations')")
@@ -35,7 +35,10 @@ def init_db():
         CREATE TABLE IF NOT EXISTS documents (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             filename TEXT UNIQUE NOT NULL,
-            team_id TEXT DEFAULT 'General'
+            team_id TEXT DEFAULT 'General',
+            upload_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            department TEXT DEFAULT 'General',
+            owner TEXT DEFAULT 'General'
         )
     """)
     
@@ -56,9 +59,9 @@ def init_db():
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             filename TEXT NOT NULL,
             transcript TEXT,
-            key_points TEXT, -- stored as JSON string
-            decisions TEXT,  -- stored as JSON string
-            action_items TEXT, -- stored as JSON string
+            key_points TEXT,
+            decisions TEXT,
+            action_items TEXT,
             team_id TEXT DEFAULT 'General',
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
@@ -69,16 +72,15 @@ def init_db():
         CREATE TABLE IF NOT EXISTS workflow_rules (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             name TEXT NOT NULL,
-            condition_type TEXT NOT NULL, -- e.g. 'confidence_below'
+            condition_type TEXT NOT NULL,
             condition_value TEXT NOT NULL,
-            action_type TEXT NOT NULL, -- e.g. 'notify_expert', 'flag_risk', 'log_alert'
+            action_type TEXT NOT NULL,
             action_target TEXT,
             team_id TEXT DEFAULT 'General',
             is_active INTEGER DEFAULT 1
         )
     """)
     
-    # Insert default workflows if empty
     cursor.execute("SELECT COUNT(*) FROM workflow_rules")
     if cursor.fetchone()[0] == 0:
         cursor.execute("""
@@ -104,7 +106,7 @@ def init_db():
             answer TEXT,
             confidence_score INTEGER,
             action_executed TEXT,
-            status TEXT, -- 'executed', 'pending_review', 'approved', 'rejected'
+            status TEXT,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
     """)
@@ -188,12 +190,27 @@ def init_db():
             template_name TEXT,
             current_step TEXT,
             status TEXT DEFAULT 'in_progress',
-            steps_data TEXT, -- JSON string representation
+            steps_data TEXT,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
     """)
 
-    # Add default tasks if empty
+    # 14. Customer Support Tickets table
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS support_tickets (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            query TEXT NOT NULL,
+            answer TEXT NOT NULL,
+            category TEXT,
+            sentiment TEXT,
+            priority TEXT,
+            status TEXT DEFAULT 'open',
+            summary TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
+
+    # Insert default tasks
     cursor.execute("SELECT COUNT(*) FROM tasks")
     if cursor.fetchone()[0] == 0:
         cursor.execute("""
@@ -209,13 +226,25 @@ def init_db():
             VALUES ('Onboard Marketing Leads', 'Setup training plans for onboarding marketing agents.', 'HR Operations', 'pending', 'low', '2026-07-25')
         """)
     
-    # Safe migrations for activity_log table
+    # Safe migrations
     try:
         cursor.execute("ALTER TABLE activity_log ADD COLUMN raw_query TEXT")
     except sqlite3.OperationalError:
         pass
     try:
         cursor.execute("ALTER TABLE activity_log ADD COLUMN team_id TEXT DEFAULT 'General'")
+    except sqlite3.OperationalError:
+        pass
+    try:
+        cursor.execute("ALTER TABLE documents ADD COLUMN upload_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP")
+    except sqlite3.OperationalError:
+        pass
+    try:
+        cursor.execute("ALTER TABLE documents ADD COLUMN department TEXT DEFAULT 'General'")
+    except sqlite3.OperationalError:
+        pass
+    try:
+        cursor.execute("ALTER TABLE documents ADD COLUMN owner TEXT DEFAULT 'General'")
     except sqlite3.OperationalError:
         pass
         
@@ -243,17 +272,24 @@ def create_team(name):
     conn.close()
     return success
 
-# DOCUMENTS TEAM HELPER FUNCTIONS
-def set_document_team(filename, team_id):
+# DOCUMENTS METADATA HELPER FUNCTIONS
+def set_document_metadata(filename, team_id, department="General", owner="General"):
     conn = get_db_connection()
     cursor = conn.cursor()
     cursor.execute("""
-        INSERT INTO documents (filename, team_id) 
-        VALUES (?, ?) 
-        ON CONFLICT(filename) DO UPDATE SET team_id = excluded.team_id
-    """, (filename, team_id))
+        INSERT INTO documents (filename, team_id, department, owner, upload_date) 
+        VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP) 
+        ON CONFLICT(filename) DO UPDATE SET 
+            team_id = excluded.team_id, 
+            department = excluded.department, 
+            owner = excluded.owner, 
+            upload_date = CURRENT_TIMESTAMP
+    """, (filename, team_id, department, owner))
     conn.commit()
     conn.close()
+
+def set_document_team(filename, team_id):
+    set_document_metadata(filename, team_id)
 
 def get_document_team_map():
     conn = get_db_connection()
@@ -262,6 +298,21 @@ def get_document_team_map():
     mapping = {row["filename"]: row["team_id"] for row in cursor.fetchall()}
     conn.close()
     return mapping
+
+def get_all_documents_with_meta():
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM documents ORDER BY upload_date DESC")
+    rows = [dict(row) for row in cursor.fetchall()]
+    conn.close()
+    return rows
+
+def delete_document(filename):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("DELETE FROM documents WHERE filename = ?", (filename,))
+    conn.commit()
+    conn.close()
 
 # QUERY LOG HELPER FUNCTIONS
 def log_query(query, confidence_score, team_id="General"):
@@ -277,7 +328,6 @@ def log_query(query, confidence_score, team_id="General"):
 def get_low_confidence_queries(limit=100):
     conn = get_db_connection()
     cursor = conn.cursor()
-    # Pull low confidence queries (score < 40)
     cursor.execute("""
         SELECT query, confidence_score, team_id, created_at 
         FROM query_log 
@@ -488,11 +538,6 @@ def add_activity(activity_type, description, details=None, raw_query=None, team_
     return activity_id
 
 def get_user_query_history(team_id: str, limit: int = 10) -> list[dict]:
-    """
-    Returns the most recent queries for a given team, most recent first.
-    Reads from the existing activity log table — read-only, no schema change.
-    Return shape: [{"query": str, "timestamp": str}, ...]
-    """
     conn = get_db_connection()
     cursor = conn.cursor()
     try:
@@ -598,5 +643,33 @@ def update_workflow_instance(instance_id, current_step, status, steps_data):
         SET current_step = ?, status = ?, steps_data = ? 
         WHERE id = ?
     """, (current_step, status, json.dumps(steps_data), instance_id))
+    conn.commit()
+    conn.close()
+
+# SUPPORT TICKETS HELPERS
+def create_support_ticket(query, answer, category, sentiment, priority, summary):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("""
+        INSERT INTO support_tickets (query, answer, category, sentiment, priority, summary)
+        VALUES (?, ?, ?, ?, ?, ?)
+    """, (query, answer, category, sentiment, priority, summary))
+    conn.commit()
+    ticket_id = cursor.lastrowid
+    conn.close()
+    return ticket_id
+
+def get_all_support_tickets(limit=100):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM support_tickets ORDER BY created_at DESC LIMIT ?", (limit,))
+    rows = [dict(r) for r in cursor.fetchall()]
+    conn.close()
+    return rows
+
+def update_support_ticket_status(ticket_id, status):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("UPDATE support_tickets SET status = ? WHERE id = ?", (status, ticket_id))
     conn.commit()
     conn.close()
