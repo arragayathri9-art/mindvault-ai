@@ -9,6 +9,7 @@ import DocumentsPage from "./components/DocumentsPage";
 import HistoryPage from "./components/HistoryPage";
 import SettingsPage from "./components/SettingsPage";
 import Login from "./components/Login";
+import InternshipRecruitment from "./components/InternshipRecruitment";
 
 import { 
   Sparkles, Database, Zap, FolderOpen, Clock, Settings, Bot, LogOut,
@@ -20,6 +21,7 @@ import { themeColors, typography, radius, pillStyle } from "./styles";
 const ROLE_NAV_CONFIGS = {
   HR: [
     { id: "hr_offer", label: "Generate Offer Letter", component: "workspace", icon: FileText, defaultQuery: "Generate Offer Letter for Rahul Sharma" },
+    { id: "hr_recruitment", label: "Internship Recruitment", component: "recruitment", icon: ClipboardList },
     { id: "hr_onboard", label: "Employee Onboarding", component: "workflows", icon: Zap },
     { id: "hr_leave", label: "Leave Approval", component: "workflows", icon: CheckSquare },
     { id: "hr_reports", label: "HR Reports", component: "documents", icon: ClipboardList, defaultCategory: "Reports" },
@@ -35,6 +37,7 @@ const ROLE_NAV_CONFIGS = {
     { id: "emp_policies", label: "Company Policies", component: "knowledge", icon: BookOpen },
   ],
   Manager: [
+    { id: "mgr_recruitment", label: "Internship Recruitment", component: "recruitment", icon: ClipboardList },
     { id: "mgr_pending", label: "Pending Approvals", component: "workflows", icon: CheckSquare },
     { id: "mgr_reports", label: "Team Reports", component: "documents", icon: FolderOpen, defaultCategory: "Reports" },
     { id: "mgr_workflows", label: "Team Workflows", component: "workflows", icon: Zap },
@@ -54,6 +57,9 @@ const ROLE_NAV_CONFIGS = {
     { id: "adm_audit", label: "Audit Logs", component: "history", icon: Clock },
     { id: "adm_usage", label: "AI Usage Monitoring", component: "history", icon: ClipboardList },
     { id: "adm_settings", label: "System Settings", component: "settings", icon: Settings },
+  ],
+  Applicant: [
+    { id: "cand_status", label: "My Application Status", component: "recruitment", icon: Clock }
   ]
 };
 
@@ -316,6 +322,10 @@ export default function App() {
                 userRole={userRole}
                 setUserRole={setUserRole}
               />
+            )}
+
+            {activeItem.component === "recruitment" && (
+              <InternshipRecruitment role={currentUserRole} />
             )}
           </ErrorBoundary>
         </div>
