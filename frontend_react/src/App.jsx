@@ -44,20 +44,6 @@ const ROLE_NAV_CONFIGS = {
     { id: "mgr_perf", label: "Performance Reports", component: "documents", icon: ClipboardList, defaultCategory: "Reports" },
     { id: "mgr_assistant", label: "AI Assistant", component: "workspace", icon: Sparkles },
   ],
-  Finance: [
-    { id: "fin_invoice", label: "Invoice Generator", component: "workspace", icon: FileText, defaultQuery: "Generate corporate invoice for Acme Corp" },
-    { id: "fin_expense", label: "Expense Approval", component: "workflows", icon: CheckSquare },
-    { id: "fin_reports", label: "Budget Reports", component: "documents", icon: ClipboardList, defaultCategory: "Reports" },
-    { id: "fin_docs", label: "Financial Documents", component: "documents", icon: FolderOpen, defaultCategory: "Invoices" },
-    { id: "fin_assistant", label: "AI Assistant", component: "workspace", icon: Sparkles },
-  ],
-  "IT Admin": [
-    { id: "adm_users", label: "User Management", component: "settings", icon: Settings },
-    { id: "adm_kb", label: "Knowledge Base Management", component: "knowledge", icon: DatabaseBackup },
-    { id: "adm_audit", label: "Audit Logs", component: "history", icon: Clock },
-    { id: "adm_usage", label: "AI Usage Monitoring", component: "history", icon: ClipboardList },
-    { id: "adm_settings", label: "System Settings", component: "settings", icon: Settings },
-  ],
   Applicant: [
     { id: "cand_status", label: "My Application Status", component: "recruitment", icon: Clock }
   ]

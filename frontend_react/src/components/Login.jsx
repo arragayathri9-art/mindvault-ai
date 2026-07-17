@@ -38,24 +38,6 @@ export default function Login({ onLoginSuccess }) {
       avatar: "👨‍💼"
     },
     {
-      role: "Finance",
-      email: "finance@mindvault.ai",
-      password: "FIN@123",
-      name: "Rajesh Patel",
-      department: "Finance & Accounts",
-      badge: "Finance Controller",
-      avatar: "💰"
-    },
-    {
-      role: "IT Admin",
-      email: "admin@mindvault.ai",
-      password: "ADMIN@123",
-      name: "System Administrator",
-      department: "IT Infrastructure",
-      badge: "IT Admin",
-      avatar: "🛠️"
-    },
-    {
       role: "Applicant",
       email: "candidate@mindvault.ai",
       password: "CAN@123",
