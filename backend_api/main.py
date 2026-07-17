@@ -150,8 +150,48 @@ class OnboardingProgressRequest(BaseModel):
     item_id: str
 
 
+class EmployeeCreateRequest(BaseModel):
+    name: str
+    email: str
+    role: str  # "Employee" | "Manager" | "HR"
+    team_id: str
+    manager_email: str | None = None
+    department: str | None = "General"
+    badge: str | None = ""
+    avatar: str | None = ""
+
+
+class LeaveRequestCreate(BaseModel):
+    employee_email: str
+    leave_type: str
+    start_date: str
+    end_date: str
+    reason: str | None = ""
+
+
+class LeaveDecisionRequest(BaseModel):
+    decision: str  # "approve" | "reject"
+    comment: str | None = ""
+    actor_email: str
+
+
+class SystemApiKeyRequest(BaseModel):
+    api_key: str
+
+
+class TeamReportCreateRequest(BaseModel):
+    title: str
+    content: str
+    employee_email: str
+
+
+class PerformanceAnalyzeRequest(BaseModel):
+    email: str
+    api_key: str | None = None
+
+
 def _resolve_api_key(request_key):
-    key = request_key or os.environ.get("GROQ_API_KEY", "")
+    key = request_key or db.get_system_setting("groq_api_key") or os.environ.get("GROQ_API_KEY", "")
     return sanitize_to_ascii(key)
 
 
@@ -853,6 +893,232 @@ def approve_workflow_log(log_id: int):
         return {"status": "success", "log_id": log_id}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+# 2b. EMPLOYEE DIRECTORY ENDPOINTS (drives team isolation + leave routing)
+@app.get("/api/employees")
+def list_employees(team_id: str | None = None, role: str | None = None):
+    try:
+        return db.get_employees(team_id=team_id, role=role)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/employees/{email}")
+def get_employee(email: str):
+    employee = db.get_employee_by_email(email)
+    if not employee:
+        raise HTTPException(status_code=404, detail="Employee not found.")
+    return employee
+
+
+@app.post("/api/employees")
+def add_employee(request: EmployeeCreateRequest):
+    if request.role not in ("Employee", "Manager", "HR"):
+        raise HTTPException(status_code=400, detail="role must be Employee, Manager, or HR.")
+    if request.role == "Employee" and not request.manager_email:
+        # Auto-assign the employee to their team's manager if one exists
+        manager = db.get_manager_for_team(request.team_id)
+        request.manager_email = manager["email"] if manager else None
+    result = db.create_employee(
+        name=request.name,
+        email=request.email.strip().lower(),
+        role=request.role,
+        team_id=request.team_id,
+        manager_email=request.manager_email,
+        department=request.department or "General",
+        badge=request.badge or "",
+        avatar=request.avatar or ""
+    )
+    if not result["success"]:
+        raise HTTPException(status_code=400, detail="An employee with this email already exists.")
+    return {"status": "success", "id": result["id"]}
+
+
+# 2c. LEAVE WORKFLOW ENDPOINTS: Employee submits -> Manager reviews -> HR gives final decision.
+# There is no auto/system approval - every request needs a human decision at each stage.
+@app.post("/api/leave")
+def submit_leave_request(request: LeaveRequestCreate):
+    employee = db.get_employee_by_email(request.employee_email)
+    if not employee:
+        raise HTTPException(status_code=404, detail="Employee not found. Please contact HR to be added.")
+
+    manager_email = employee.get("manager_email")
+    if not manager_email:
+        manager = db.get_manager_for_team(employee["team_id"])
+        manager_email = manager["email"] if manager else None
+    if not manager_email:
+        raise HTTPException(status_code=400, detail=f"No manager is assigned to team '{employee['team_id']}' yet.")
+
+    request_id = db.create_leave_request(
+        employee_email=employee["email"],
+        employee_name=employee["name"],
+        team_id=employee["team_id"],
+        manager_email=manager_email,
+        leave_type=request.leave_type,
+        start_date=request.start_date,
+        end_date=request.end_date,
+        reason=request.reason or ""
+    )
+    db.add_notification(
+        title="New leave request",
+        content=f"{employee['name']} requested {request.leave_type} ({request.start_date} to {request.end_date}).",
+        type_str="leave"
+    )
+    return {"status": "success", "id": request_id, "routed_to_manager": manager_email}
+
+
+@app.get("/api/leave")
+def list_leave_requests(role: str, email: str, team_id: str | None = None):
+    try:
+        if role == "Employee":
+            return db.get_leave_requests_for_employee(email)
+        elif role == "Manager":
+            # Managers only ever see requests routed to them - own team only, no cross-team visibility
+            return db.get_leave_requests_for_manager(email)
+        elif role == "HR":
+            # HR sees every request across every team, for final approval + records
+            return db.get_all_leave_requests()
+        else:
+            raise HTTPException(status_code=400, detail="role must be Employee, Manager, or HR.")
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/leave/{request_id}/manager-decision")
+def decide_leave_as_manager(request_id: int, request: LeaveDecisionRequest):
+    if request.decision not in ("approve", "reject"):
+        raise HTTPException(status_code=400, detail="decision must be 'approve' or 'reject'.")
+    result = db.manager_decide_leave(request_id, request.decision, request.comment or "", request.actor_email)
+    if not result["success"]:
+        if result["error"] == "not_found":
+            raise HTTPException(status_code=404, detail="Leave request not found.")
+        if result["error"] == "forbidden":
+            raise HTTPException(status_code=403, detail="This request belongs to a different team's manager.")
+        if result["error"] == "already_decided":
+            raise HTTPException(status_code=409, detail="This request has already moved past the manager stage.")
+    if result["status"] == "pending_hr":
+        db.add_notification(
+            title="Leave awaiting HR approval",
+            content=f"Request #{request_id} was approved by the manager and now needs HR's final decision.",
+            type_str="leave"
+        )
+    return result
+
+
+@app.post("/api/leave/{request_id}/hr-decision")
+def decide_leave_as_hr(request_id: int, request: LeaveDecisionRequest):
+    if request.decision not in ("approve", "reject"):
+        raise HTTPException(status_code=400, detail="decision must be 'approve' or 'reject'.")
+    result = db.hr_decide_leave(request_id, request.decision, request.comment or "")
+    if not result["success"]:
+        if result["error"] == "not_found":
+            raise HTTPException(status_code=404, detail="Leave request not found.")
+        if result["error"] == "not_ready_for_hr":
+            raise HTTPException(status_code=409, detail="This request is not awaiting HR decision yet.")
+    return result
+
+
+# 2d. SYSTEM API KEY SETTINGS ENDPOINTS
+@app.get("/api/settings/ai-key")
+def get_ai_key():
+    key = db.get_system_setting("groq_api_key")
+    if not key:
+        return {"api_key": ""}
+    if len(key) <= 8:
+        masked = "*" * len(key)
+    else:
+        masked = key[:8] + "..." + key[-4:]
+    return {"api_key": masked}
+
+
+@app.post("/api/settings/ai-key")
+def set_ai_key(request: SystemApiKeyRequest):
+    new_key = request.api_key.strip()
+    if not new_key:
+        db.set_system_setting("groq_api_key", "")
+        return {"status": "success", "message": "API key removed."}
+    if "..." in new_key or (new_key.startswith("gsk_") and len(new_key) < 20):
+        return {"status": "success", "message": "Key unmodified."}
+    db.set_system_setting("groq_api_key", new_key)
+    return {"status": "success", "message": "API key updated."}
+
+
+# 2e. TEAM REPORTS ENDPOINTS
+@app.post("/api/team-reports")
+def submit_team_report(request: TeamReportCreateRequest):
+    employee = db.get_employee_by_email(request.employee_email)
+    if not employee:
+        raise HTTPException(status_code=404, detail="Employee not found.")
+    
+    manager_email = employee.get("manager_email")
+    if not manager_email:
+        manager = db.get_manager_for_team(employee["team_id"])
+        manager_email = manager["email"] if manager else None
+    
+    report_id = db.create_team_report(
+        employee_email=employee["email"],
+        employee_name=employee["name"],
+        team_id=employee["team_id"],
+        manager_email=manager_email,
+        title=request.title,
+        content=request.content
+    )
+    
+    db.add_notification(
+        title="New team report submitted",
+        content=f"{employee['name']} submitted a report: {request.title}.",
+        type_str="report"
+    )
+    return {"status": "success", "id": report_id}
+
+
+@app.get("/api/team-reports")
+def list_team_reports(role: str, email: str, team_id: str | None = None):
+    try:
+        return db.get_team_reports(role, email, team_id)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# 2f. PERFORMANCE ASSESSMENT ENDPOINT
+@app.post("/api/performance/analyze")
+def analyze_performance(request: PerformanceAnalyzeRequest):
+    employee = db.get_employee_by_email(request.email)
+    if not employee:
+        raise HTTPException(status_code=404, detail="Employee not found.")
+    
+    api_key = _resolve_api_key(request.api_key)
+    if not api_key:
+        raise HTTPException(status_code=400, detail="No Groq API key configured for performance analysis.")
+    
+    client = Groq(api_key=api_key)
+    system_prompt = (
+        "You are an expert HR Performance Analyst. Write a detailed, highly professional, and encouraging performance evaluation report for an employee.\n"
+        "Format the output in clean markdown with the following sections:\n"
+        "1. Performance Summary (rating the employee out of 5 stars)\n"
+        "2. Key Strengths (3 bullet points)\n"
+        "3. Growth Opportunities & Training Recommendations (2-3 bullet points)\n"
+        "4. Overall Recommendation Statement\n"
+        "Keep the tone professional, objective, and constructive. Use the employee's name and role in the feedback."
+    )
+    user_prompt = f"Employee Name: {employee['name']}\nRole: {employee['role']} ({employee['badge']})\nTeam: {employee['team_id']}\nDepartment: {employee['department']}"
+    
+    try:
+        response = client.chat.completions.create(
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_prompt}
+            ],
+            model="llama-3.3-70b-versatile",
+            temperature=0.5
+        )
+        report_content = response.choices[0].message.content
+        return {"status": "success", "report": report_content}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to generate performance analysis: {str(e)}")
 
 
 # 3. PROACTIVE GAP REPORTS ENDPOINT

@@ -10,10 +10,18 @@ import HistoryPage from "./components/HistoryPage";
 import SettingsPage from "./components/SettingsPage";
 import Login from "./components/Login";
 import InternshipRecruitment from "./components/InternshipRecruitment";
+import LeaveManagement from "./components/LeaveManagement";
+
+// New components
+import EmployeeOnboarding from "./components/EmployeeOnboarding";
+import TeamReports from "./components/TeamReports";
+import PerformanceSection from "./components/PerformanceSection";
+import AdminDashboard from "./components/AdminDashboard";
+import AdminLock from "./components/AdminLock";
 
 import { 
   Sparkles, Database, Zap, FolderOpen, Clock, Settings, Bot, LogOut,
-  FileText, CheckSquare, ClipboardList, BookOpen, DatabaseBackup
+  FileText, CheckSquare, ClipboardList, BookOpen, DatabaseBackup, ShieldCheck
 } from "lucide-react";
 import { themeColors, typography, radius, pillStyle } from "./styles";
 
@@ -22,27 +30,35 @@ const ROLE_NAV_CONFIGS = {
   HR: [
     { id: "hr_offer", label: "Generate Offer Letter", component: "workspace", icon: FileText, defaultQuery: "Generate Offer Letter for Rahul Sharma" },
     { id: "hr_recruitment", label: "Internship Recruitment", component: "recruitment", icon: ClipboardList },
-    { id: "hr_onboard", label: "Employee Onboarding", component: "workflows", icon: Zap },
-    { id: "hr_leave", label: "Leave Approval", component: "workflows", icon: CheckSquare },
+    { id: "hr_onboard", label: "Employee Onboarding", component: "onboarding", icon: Zap },
+    { id: "hr_leave", label: "Leave Approval", component: "leave", icon: CheckSquare },
     { id: "hr_reports", label: "HR Reports", component: "documents", icon: ClipboardList, defaultCategory: "Reports" },
+    { id: "hr_team_reports", label: "Team Reports", component: "team_reports", icon: ClipboardList },
+    { id: "hr_performance", label: "Performance", component: "performance", icon: ClipboardList },
     { id: "hr_policies", label: "Company Policies", component: "knowledge", icon: BookOpen },
     { id: "hr_records", label: "Employee Records", component: "history", icon: Clock },
+    { id: "hr_admin", label: "Admin Panel", component: "admin", icon: ShieldCheck },
+    { id: "hr_settings", label: "Settings", component: "settings", icon: Settings },
   ],
   Employee: [
     { id: "emp_assistant", label: "AI Assistant", component: "workspace", icon: Sparkles },
     { id: "emp_search", label: "Search Company Knowledge", component: "knowledge", icon: Database },
     { id: "emp_docs", label: "My Documents", component: "documents", icon: FolderOpen },
-    { id: "emp_leave", label: "Apply Leave", component: "workflows", icon: Zap },
+    { id: "emp_leave", label: "Apply Leave", component: "leave", icon: Zap },
+    { id: "emp_team_reports", label: "Team Reports", component: "team_reports", icon: ClipboardList },
     { id: "emp_meetings", label: "Meeting Summaries", component: "documents", icon: FileText, defaultCategory: "Meeting Minutes" },
     { id: "emp_policies", label: "Company Policies", component: "knowledge", icon: BookOpen },
+    { id: "emp_settings", label: "Settings", component: "settings", icon: Settings },
   ],
   Manager: [
     { id: "mgr_recruitment", label: "Internship Recruitment", component: "recruitment", icon: ClipboardList },
-    { id: "mgr_pending", label: "Pending Approvals", component: "workflows", icon: CheckSquare },
+    { id: "mgr_pending", label: "Leave Approvals", component: "leave", icon: CheckSquare },
     { id: "mgr_reports", label: "Team Reports", component: "documents", icon: FolderOpen, defaultCategory: "Reports" },
+    { id: "mgr_team_reports", label: "Team Reports", component: "team_reports", icon: ClipboardList },
     { id: "mgr_workflows", label: "Team Workflows", component: "workflows", icon: Zap },
     { id: "mgr_perf", label: "Performance Reports", component: "documents", icon: ClipboardList, defaultCategory: "Reports" },
     { id: "mgr_assistant", label: "AI Assistant", component: "workspace", icon: Sparkles },
+    { id: "mgr_settings", label: "Settings", component: "settings", icon: Settings },
   ]
 };
 
@@ -55,6 +71,7 @@ export default function App() {
   const [apiKey, setApiKey] = useState("");
   const [selectedTeam, setSelectedTeam] = useState("General");
   const [userRole, setUserRole] = useState("Software Engineer");
+  const [adminUnlocked, setAdminUnlocked] = useState(() => !!sessionStorage.getItem("adminToken"));
 
   const currentUserRole = sessionStorage.getItem("userRole") || "Employee";
   const allowedNavs = ROLE_NAV_CONFIGS[currentUserRole] || ROLE_NAV_CONFIGS.Employee;
@@ -309,6 +326,30 @@ export default function App() {
 
             {activeItem.component === "recruitment" && (
               <InternshipRecruitment role={currentUserRole} />
+            )}
+
+            {activeItem.component === "leave" && (
+              <LeaveManagement role={currentUserRole} />
+            )}
+
+            {activeItem.component === "onboarding" && currentUserRole === "HR" && (
+              <EmployeeOnboarding />
+            )}
+
+            {activeItem.component === "team_reports" && (
+              <TeamReports role={currentUserRole} />
+            )}
+
+            {activeItem.component === "performance" && currentUserRole === "HR" && (
+              <PerformanceSection />
+            )}
+
+            {activeItem.component === "admin" && currentUserRole === "HR" && (
+              adminUnlocked ? (
+                <AdminDashboard />
+              ) : (
+                <AdminLock onUnlock={() => setAdminUnlocked(true)} />
+              )
             )}
           </ErrorBoundary>
         </div>

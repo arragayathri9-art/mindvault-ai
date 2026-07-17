@@ -1,7 +1,10 @@
 import { useState, useEffect } from "react";
-import { getInsights, getGapReports, getAnalytics } from "../api";
+import axios from "axios";
+import { getInsights, getGapReports, getAnalytics, generatePPT } from "../api";
 import { cardStyle, buttonStyle, themeColors, typography, sectionLabelStyle, pillStyle, kpiCardStyle } from "../styles";
-import { BarChart3, AlertTriangle, Users, FileText, RefreshCw } from "lucide-react";
+import { BarChart3, AlertTriangle, Users, FileText, RefreshCw, Download } from "lucide-react";
+
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || (import.meta.env.DEV ? "http://localhost:8000" : "");
 
 export default function AnalyticsDashboard({ apiKey }) {
   const [loading, setLoading] = useState(true);
@@ -12,6 +15,22 @@ export default function AnalyticsDashboard({ apiKey }) {
   const [gapReports, setGapReports] = useState([]);
   const [metrics, setMetrics] = useState(null);
   const [tickets, setTickets] = useState([]);
+
+  const handleExportPPT = async () => {
+    try {
+      const data = await generatePPT({ mode: "insights", api_key: apiKey });
+      const blob = new Blob([data], { type: "application/vnd.openxmlformats-officedocument.presentationml.presentation" });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.setAttribute("download", `mindvault_insights_${Date.now()}.pptx`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch (err) {
+      alert("Failed to export PPT: " + (err.message || err));
+    }
+  };
 
   const loadAllAnalytics = async () => {
     setLoading(true);
@@ -68,22 +87,42 @@ export default function AnalyticsDashboard({ apiKey }) {
         <p style={{ color: themeColors.textSecondary, margin: 0, fontSize: "0.9rem" }}>
           Analyze knowledge coverage, system activity, and automatic compliance audits.
         </p>
-        <button
-          onClick={loadAllAnalytics}
-          disabled={loading}
-          style={{
-            ...buttonStyle,
-            marginTop: 0,
-            padding: "0.5rem 1rem",
-            fontSize: "0.85rem",
-            display: "flex",
-            alignItems: "center",
-            gap: "0.4rem"
-          }}
-        >
-          <RefreshCw size={14} className={loading ? "spin" : ""} />
-          {loading ? "Refreshing..." : "Refresh Dashboard"}
-        </button>
+        <div style={{ display: "flex", gap: "0.75rem" }}>
+          <button
+            onClick={handleExportPPT}
+            style={{
+              ...buttonStyle,
+              marginTop: 0,
+              padding: "0.5rem 1rem",
+              fontSize: "0.85rem",
+              display: "flex",
+              alignItems: "center",
+              gap: "0.4rem",
+              background: "rgba(201, 162, 39, 0.1)",
+              border: `1px solid ${themeColors.accentPrimary}`,
+              color: themeColors.accentPrimary
+            }}
+          >
+            <Download size={14} />
+            Export Insights as PPT
+          </button>
+          <button
+            onClick={loadAllAnalytics}
+            disabled={loading}
+            style={{
+              ...buttonStyle,
+              marginTop: 0,
+              padding: "0.5rem 1rem",
+              fontSize: "0.85rem",
+              display: "flex",
+              alignItems: "center",
+              gap: "0.4rem"
+            }}
+          >
+            <RefreshCw size={14} className={loading ? "spin" : ""} />
+            {loading ? "Refreshing..." : "Refresh Dashboard"}
+          </button>
+        </div>
       </div>
 
       {/* 2. KPI Cards */}

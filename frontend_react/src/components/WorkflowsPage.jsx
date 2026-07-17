@@ -65,17 +65,6 @@ export default function WorkflowsPage({ workflowType }) {
       timeline: ["Contract Signed", "Profile Verification", "IT Hardware Setup", "HR Welcome Briefing"]
     },
     {
-      id: "wf-103",
-      name: "Leave Request - Priya Patel",
-      status: "Completed",
-      progress: 100,
-      approver: "System Auto-approval",
-      created_time: "Yesterday",
-      est_completion: "Completed",
-      current_step: "Completed",
-      timeline: ["Request Submitted", "Availability Verification", "System Approval", "Leave Log Updated"]
-    },
-    {
       id: "wf-104",
       name: "Q3 HR Analysis Compilation",
       status: "Completed",

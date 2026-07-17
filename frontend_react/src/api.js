@@ -251,3 +251,79 @@ export async function logActivity(payload) {
   const response = await axios.post(`${API_BASE_URL}/api/activity`, payload);
   return response.data;
 }
+
+// ==========================================
+// EMPLOYEE DIRECTORY + LEAVE WORKFLOW (Employee -> Manager -> HR)
+// ==========================================
+export async function getEmployees(teamId = null, role = null) {
+  const params = {};
+  if (teamId) params.team_id = teamId;
+  if (role) params.role = role;
+  const response = await axios.get(`${API_BASE_URL}/api/employees`, { params });
+  return response.data;
+}
+
+export async function getEmployeeProfile(email) {
+  const response = await axios.get(`${API_BASE_URL}/api/employees/${encodeURIComponent(email)}`);
+  return response.data;
+}
+
+export async function createEmployee(payload) {
+  const response = await axios.post(`${API_BASE_URL}/api/employees`, payload);
+  return response.data;
+}
+
+export async function submitLeaveRequest(payload) {
+  const response = await axios.post(`${API_BASE_URL}/api/leave`, payload);
+  return response.data;
+}
+
+export async function getLeaveRequests(role, email) {
+  const response = await axios.get(`${API_BASE_URL}/api/leave`, { params: { role, email } });
+  return response.data;
+}
+
+export async function managerDecideLeave(requestId, decision, comment, actorEmail) {
+  const response = await axios.post(`${API_BASE_URL}/api/leave/${requestId}/manager-decision`, {
+    decision,
+    comment,
+    actor_email: actorEmail
+  });
+  return response.data;
+}
+
+export async function hrDecideLeave(requestId, decision, comment, actorEmail) {
+  const response = await axios.post(`${API_BASE_URL}/api/leave/${requestId}/hr-decision`, {
+    decision,
+    comment,
+    actor_email: actorEmail
+  });
+  return response.data;
+}
+
+export async function getSystemApiKey() {
+  const response = await axios.get(`${API_BASE_URL}/api/settings/ai-key`);
+  return response.data;
+}
+
+export async function saveSystemApiKey(apiKey) {
+  const response = await axios.post(`${API_BASE_URL}/api/settings/ai-key`, { api_key: apiKey });
+  return response.data;
+}
+
+export async function submitTeamReport(payload) {
+  const response = await axios.post(`${API_BASE_URL}/api/team-reports`, payload);
+  return response.data;
+}
+
+export async function getTeamReports(role, email, teamId = null) {
+  const params = { role, email };
+  if (teamId) params.team_id = teamId;
+  const response = await axios.get(`${API_BASE_URL}/api/team-reports`, { params });
+  return response.data;
+}
+
+export async function analyzePerformance(email, apiKey = null) {
+  const response = await axios.post(`${API_BASE_URL}/api/performance/analyze`, { email, api_key: apiKey });
+  return response.data;
+}

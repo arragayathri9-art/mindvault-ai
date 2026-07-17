@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { askMindVault, logActivity } from "../api";
+import { askMindVault, logActivity, generatePPT } from "../api";
 import { cardStyle, inputStyle, buttonStyle, themeColors, typography, pillStyle } from "../styles";
 import { Sparkles, CheckCircle2, ArrowRight, Download, FileText, Layers, Cpu } from "lucide-react";
 
@@ -447,6 +447,33 @@ export default function Workspace({ apiKey, selectedTeam, defaultQuery, role }) 
     document.body.removeChild(link);
   };
 
+  const handleExportPPT = async () => {
+    if (!docPreview) return;
+    try {
+      const payload = {
+        mode: "ask",
+        ask_data: {
+          query: query || "AI Assistant Query",
+          answer: docPreview.content,
+          confidence_score: result ? result.confidence_score : 95,
+          sources: result ? result.sources : [],
+          experts: result ? result.experts : []
+        }
+      };
+      const data = await generatePPT(payload);
+      const blob = new Blob([data], { type: "application/vnd.openxmlformats-officedocument.presentationml.presentation" });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.setAttribute("download", `${docPreview.title.replace('.txt', '')}_presentation.pptx`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch (err) {
+      alert("Failed to export presentation: " + (err.message || err));
+    }
+  };
+
   return (
     <div style={{ display: "flex", gap: "2.5rem", flexWrap: "wrap", alignItems: "flex-start", width: "100%" }}>
       {/* Left Column: Input and Redesigned 4 Sections */}
@@ -730,18 +757,32 @@ export default function Workspace({ apiKey, selectedTeam, defaultQuery, role }) 
                 <FileText size={16} style={{ color: themeColors.accentPrimary }} />
                 <span style={{ fontSize: "0.85rem", fontWeight: "bold" }}>{docPreview.title}</span>
               </div>
-              <button
-                onClick={downloadDocFile}
-                style={{
-                  background: "transparent",
-                  border: "none",
-                  cursor: "pointer",
-                  color: themeColors.textSecondary,
-                }}
-                title="Download text"
-              >
-                <Download size={16} />
-              </button>
+              <div style={{ display: "flex", gap: "0.5rem" }}>
+                <button
+                  onClick={handleExportPPT}
+                  style={{
+                    background: "transparent",
+                    border: "none",
+                    cursor: "pointer",
+                    color: themeColors.accentPrimary,
+                  }}
+                  title="Export response to PowerPoint (PPT)"
+                >
+                  <FileText size={16} />
+                </button>
+                <button
+                  onClick={downloadDocFile}
+                  style={{
+                    background: "transparent",
+                    border: "none",
+                    cursor: "pointer",
+                    color: themeColors.textSecondary,
+                  }}
+                  title="Download text"
+                >
+                  <Download size={16} />
+                </button>
+              </div>
             </div>
 
             <div style={{

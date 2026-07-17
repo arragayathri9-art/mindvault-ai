@@ -8,7 +8,9 @@ export default function Login({ onLoginSuccess }) {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  // Demo user data matching requested specifications
+  // Demo user data matching requested specifications.
+  // Two isolated teams (Engineering, Sales) each with their own manager, so leave
+  // requests and team reports never cross between managers.
   const demoUsers = [
     {
       role: "HR",
@@ -17,7 +19,8 @@ export default function Login({ onLoginSuccess }) {
       name: "Gayathri Arra",
       department: "Human Resources",
       badge: "HR Manager",
-      avatar: "👩‍💼"
+      avatar: "👩‍💼",
+      team: "HR Operations"
     },
     {
       role: "Employee",
@@ -26,7 +29,8 @@ export default function Login({ onLoginSuccess }) {
       name: "Sarah Jenkins",
       department: "Customer Support",
       badge: "Support Specialist",
-      avatar: "👤"
+      avatar: "👤",
+      team: "Engineering"
     },
     {
       role: "Manager",
@@ -35,7 +39,28 @@ export default function Login({ onLoginSuccess }) {
       name: "David Miller",
       department: "Operations",
       badge: "Team Lead",
-      avatar: "👨‍💼"
+      avatar: "👨‍💼",
+      team: "Engineering"
+    },
+    {
+      role: "Manager",
+      email: "manager.sales@mindvault.ai",
+      password: "MGR@123",
+      name: "Ananya Rao",
+      department: "Sales",
+      badge: "Team Lead",
+      avatar: "👨‍💼",
+      team: "Sales"
+    },
+    {
+      role: "Employee",
+      email: "employee.sales@mindvault.ai",
+      password: "EMP@123",
+      name: "Karan Verma",
+      department: "Sales",
+      badge: "Sales Executive",
+      avatar: "👤",
+      team: "Sales"
     }
   ];
 
@@ -57,6 +82,8 @@ export default function Login({ onLoginSuccess }) {
         sessionStorage.setItem("userDept", matchedUser.department);
         sessionStorage.setItem("userBadge", matchedUser.badge);
         sessionStorage.setItem("userAvatar", matchedUser.avatar);
+        sessionStorage.setItem("userEmail", matchedUser.email);
+        sessionStorage.setItem("userTeamId", matchedUser.team);
         onLoginSuccess();
       } else {
         setError("Invalid email address or password. Try selecting a quick login role below.");

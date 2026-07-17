@@ -210,6 +210,80 @@ def init_db():
         )
     """)
 
+    # 15. Employees table (drives team/manager routing and login identity)
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS employees (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            email TEXT UNIQUE NOT NULL,
+            role TEXT NOT NULL,
+            team_id TEXT NOT NULL DEFAULT 'General',
+            manager_email TEXT,
+            department TEXT DEFAULT 'General',
+            badge TEXT DEFAULT '',
+            avatar TEXT DEFAULT '',
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
+
+    # 16. Leave requests table - Employee submits, Manager reviews, HR gives final decision
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS leave_requests (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            employee_email TEXT NOT NULL,
+            employee_name TEXT NOT NULL,
+            team_id TEXT NOT NULL DEFAULT 'General',
+            manager_email TEXT,
+            leave_type TEXT NOT NULL DEFAULT 'Casual Leave',
+            start_date TEXT NOT NULL,
+            end_date TEXT NOT NULL,
+            reason TEXT,
+            status TEXT NOT NULL DEFAULT 'pending_manager',
+            manager_comment TEXT,
+            manager_decided_at TIMESTAMP,
+            hr_comment TEXT,
+            hr_decided_at TIMESTAMP,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
+
+    # 17. System Settings table
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS system_settings (
+            key TEXT PRIMARY KEY,
+            value TEXT
+        )
+    """)
+
+    # 18. Team Reports table
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS team_reports (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            employee_email TEXT NOT NULL,
+            employee_name TEXT NOT NULL,
+            team_id TEXT NOT NULL DEFAULT 'General',
+            manager_email TEXT,
+            title TEXT NOT NULL,
+            content TEXT NOT NULL,
+            submitted_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
+
+    # Seed demo employees - two isolated teams, each with its own manager
+    cursor.execute("SELECT COUNT(*) FROM employees")
+    if cursor.fetchone()[0] == 0:
+        demo_employees = [
+            ("Gayathri Arra", "hr@mindvault.ai", "HR", "HR Operations", None, "Human Resources", "HR Manager", "\U0001F469\u200D\U0001F4BC"),
+            ("David Miller", "manager@mindvault.ai", "Manager", "Engineering", None, "Operations", "Team Lead", "\U0001F468\u200D\U0001F4BC"),
+            ("Sarah Jenkins", "employee@mindvault.ai", "Employee", "Engineering", "manager@mindvault.ai", "Customer Support", "Support Specialist", "\U0001F464"),
+            ("Ananya Rao", "manager.sales@mindvault.ai", "Manager", "Sales", None, "Sales", "Team Lead", "\U0001F468\u200D\U0001F4BC"),
+            ("Karan Verma", "employee.sales@mindvault.ai", "Employee", "Sales", "manager.sales@mindvault.ai", "Sales", "Sales Executive", "\U0001F464"),
+        ]
+        cursor.executemany("""
+            INSERT INTO employees (name, email, role, team_id, manager_email, department, badge, avatar)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        """, demo_employees)
+
     # Insert default tasks
     cursor.execute("SELECT COUNT(*) FROM tasks")
     if cursor.fetchone()[0] == 0:
@@ -673,3 +747,217 @@ def update_support_ticket_status(ticket_id, status):
     cursor.execute("UPDATE support_tickets SET status = ? WHERE id = ?", (status, ticket_id))
     conn.commit()
     conn.close()
+
+# EMPLOYEES / TEAM DIRECTORY HELPERS
+def get_employee_by_email(email):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM employees WHERE lower(email) = lower(?)", (email,))
+    row = cursor.fetchone()
+    conn.close()
+    return dict(row) if row else None
+
+def get_employees(team_id=None, role=None):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    query = "SELECT * FROM employees WHERE 1=1"
+    params = []
+    if team_id:
+        query += " AND team_id = ?"
+        params.append(team_id)
+    if role:
+        query += " AND role = ?"
+        params.append(role)
+    query += " ORDER BY role ASC, name ASC"
+    cursor.execute(query, params)
+    rows = cursor.fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
+
+def get_manager_for_team(team_id):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM employees WHERE team_id = ? AND role = 'Manager' LIMIT 1", (team_id,))
+    row = cursor.fetchone()
+    conn.close()
+    return dict(row) if row else None
+
+def create_employee(name, email, role, team_id, manager_email=None, department="General", badge="", avatar=""):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    try:
+        cursor.execute("""
+            INSERT INTO employees (name, email, role, team_id, manager_email, department, badge, avatar)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        """, (name, email, role, team_id, manager_email, department, badge, avatar))
+        conn.commit()
+        emp_id = cursor.lastrowid
+        success = True
+    except sqlite3.IntegrityError:
+        emp_id = None
+        success = False
+    conn.close()
+    return {"success": success, "id": emp_id}
+
+# LEAVE REQUEST HELPERS (Employee -> Manager -> HR workflow)
+def create_leave_request(employee_email, employee_name, team_id, manager_email, leave_type, start_date, end_date, reason):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("""
+        INSERT INTO leave_requests
+            (employee_email, employee_name, team_id, manager_email, leave_type, start_date, end_date, reason, status)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'pending_manager')
+    """, (employee_email, employee_name, team_id, manager_email, leave_type, start_date, end_date, reason))
+    conn.commit()
+    request_id = cursor.lastrowid
+    conn.close()
+    return request_id
+
+def get_leave_request(request_id):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM leave_requests WHERE id = ?", (request_id,))
+    row = cursor.fetchone()
+    conn.close()
+    return dict(row) if row else None
+
+def get_leave_requests_for_employee(employee_email):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT * FROM leave_requests WHERE lower(employee_email) = lower(?) ORDER BY created_at DESC
+    """, (employee_email,))
+    rows = cursor.fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
+
+def get_leave_requests_for_manager(manager_email):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT * FROM leave_requests WHERE lower(manager_email) = lower(?) ORDER BY created_at DESC
+    """, (manager_email,))
+    rows = cursor.fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
+
+def get_all_leave_requests():
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM leave_requests ORDER BY created_at DESC")
+    rows = cursor.fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
+
+def manager_decide_leave(request_id, decision, comment, manager_email):
+    """decision: 'approve' -> pending_hr, 'reject' -> rejected_manager"""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT manager_email, status FROM leave_requests WHERE id = ?", (request_id,))
+    row = cursor.fetchone()
+    if not row:
+        conn.close()
+        return {"success": False, "error": "not_found"}
+    if row["manager_email"] and row["manager_email"].lower() != manager_email.lower():
+        conn.close()
+        return {"success": False, "error": "forbidden"}
+    if row["status"] != "pending_manager":
+        conn.close()
+        return {"success": False, "error": "already_decided"}
+
+    new_status = "pending_hr" if decision == "approve" else "rejected_manager"
+    cursor.execute("""
+        UPDATE leave_requests
+        SET status = ?, manager_comment = ?, manager_decided_at = CURRENT_TIMESTAMP
+        WHERE id = ?
+    """, (new_status, comment, request_id))
+    conn.commit()
+    conn.close()
+    return {"success": True, "status": new_status}
+
+def hr_decide_leave(request_id, decision, comment):
+    """decision: 'approve' -> approved, 'reject' -> rejected_hr. Only valid once manager has approved."""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT status FROM leave_requests WHERE id = ?", (request_id,))
+    row = cursor.fetchone()
+    if not row:
+        conn.close()
+        return {"success": False, "error": "not_found"}
+    if row["status"] != "pending_hr":
+        conn.close()
+        return {"success": False, "error": "not_ready_for_hr"}
+
+    new_status = "approved" if decision == "approve" else "rejected_hr"
+    cursor.execute("""
+        UPDATE leave_requests
+        SET status = ?, hr_comment = ?, hr_decided_at = CURRENT_TIMESTAMP
+        WHERE id = ?
+    """, (new_status, comment, request_id))
+    conn.commit()
+    conn.close()
+    return {"success": True, "status": new_status}
+
+# SYSTEM CONFIGURATION SETTINGS
+def get_system_setting(key):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT value FROM system_settings WHERE key = ?", (key,))
+    row = cursor.fetchone()
+    conn.close()
+    return row["value"] if row else None
+
+def set_system_setting(key, value):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("""
+        INSERT INTO system_settings (key, value)
+        VALUES (?, ?)
+        ON CONFLICT(key) DO UPDATE SET value = excluded.value
+    """, (key, value))
+    conn.commit()
+    conn.close()
+    return {"success": True}
+
+# TEAM REPORTS HELPERS
+def create_team_report(employee_email, employee_name, team_id, manager_email, title, content):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("""
+        INSERT INTO team_reports (employee_email, employee_name, team_id, manager_email, title, content)
+        VALUES (?, ?, ?, ?, ?, ?)
+    """, (employee_email, employee_name, team_id, manager_email, title, content))
+    conn.commit()
+    report_id = cursor.lastrowid
+    conn.close()
+    return report_id
+
+def get_team_reports(role, email, team_id=None):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    if role == "Employee":
+        # Employees see only their own reports
+        cursor.execute("""
+            SELECT * FROM team_reports WHERE lower(employee_email) = lower(?) ORDER BY submitted_at DESC
+        """, (email,))
+    elif role == "Manager":
+        # Managers only see reports of their own team
+        cursor.execute("""
+            SELECT * FROM team_reports WHERE lower(manager_email) = lower(?) ORDER BY submitted_at DESC
+        """, (email,))
+    elif role == "HR":
+        # HR sees all reports (can filter by team_id if provided)
+        if team_id:
+            cursor.execute("""
+                SELECT * FROM team_reports WHERE team_id = ? ORDER BY submitted_at DESC
+            """, (team_id,))
+        else:
+            cursor.execute("""
+                SELECT * FROM team_reports ORDER BY submitted_at DESC
+            """)
+    else:
+        conn.close()
+        return []
+    rows = cursor.fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
