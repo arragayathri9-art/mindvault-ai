@@ -1,7 +1,7 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import ErrorBoundary from "./components/ErrorBoundary";
 
-// New Redesigned Tab Components
+// Dynamic Dashboard Pages
 import Workspace from "./components/Workspace";
 import KnowledgePage from "./components/KnowledgePage";
 import WorkflowsPage from "./components/WorkflowsPage";
@@ -10,32 +10,87 @@ import HistoryPage from "./components/HistoryPage";
 import SettingsPage from "./components/SettingsPage";
 import Login from "./components/Login";
 
-import { Sparkles, Database, Zap, FolderOpen, Clock, Settings, Bot } from "lucide-react";
+import { 
+  Sparkles, Database, Zap, FolderOpen, Clock, Settings, Bot, LogOut,
+  FileText, CheckSquare, ClipboardList, BookOpen, DatabaseBackup
+} from "lucide-react";
 import { themeColors, typography, radius } from "./styles";
 
-const NAV_ITEMS = [
-  { id: "workspace", label: "Workspace", icon: Sparkles },
-  { id: "knowledge", label: "Knowledge", icon: Database },
-  { id: "workflows", label: "Workflows", icon: Zap },
-  { id: "documents", label: "Documents", icon: FolderOpen },
-  { id: "history", label: "History", icon: Clock },
-  { id: "settings", label: "Settings", icon: Settings },
-];
+// nav item configurations mapped specifically to the user's role
+const ROLE_NAV_CONFIGS = {
+  HR: [
+    { id: "hr_offer", label: "Generate Offer Letter", component: "workspace", icon: FileText, defaultQuery: "Generate Offer Letter for Rahul Sharma" },
+    { id: "hr_onboard", label: "Employee Onboarding", component: "workflows", icon: Zap },
+    { id: "hr_leave", label: "Leave Approval", component: "workflows", icon: CheckSquare },
+    { id: "hr_reports", label: "HR Reports", component: "documents", icon: ClipboardList, defaultCategory: "Reports" },
+    { id: "hr_policies", label: "Company Policies", component: "knowledge", icon: BookOpen },
+    { id: "hr_records", label: "Employee Records", component: "history", icon: Clock },
+  ],
+  Employee: [
+    { id: "emp_assistant", label: "AI Assistant", component: "workspace", icon: Sparkles },
+    { id: "emp_search", label: "Search Company Knowledge", component: "knowledge", icon: Database },
+    { id: "emp_docs", label: "My Documents", component: "documents", icon: FolderOpen },
+    { id: "emp_leave", label: "Apply Leave", component: "workflows", icon: Zap },
+    { id: "emp_meetings", label: "Meeting Summaries", component: "documents", icon: FileText, defaultCategory: "Meeting Minutes" },
+    { id: "emp_policies", label: "Company Policies", component: "knowledge", icon: BookOpen },
+  ],
+  Manager: [
+    { id: "mgr_pending", label: "Pending Approvals", component: "workflows", icon: CheckSquare },
+    { id: "mgr_reports", label: "Team Reports", component: "documents", icon: FolderOpen, defaultCategory: "Reports" },
+    { id: "mgr_workflows", label: "Team Workflows", component: "workflows", icon: Zap },
+    { id: "mgr_perf", label: "Performance Reports", component: "documents", icon: ClipboardList, defaultCategory: "Reports" },
+    { id: "mgr_assistant", label: "AI Assistant", component: "workspace", icon: Sparkles },
+  ],
+  Finance: [
+    { id: "fin_invoice", label: "Invoice Generator", component: "workspace", icon: FileText, defaultQuery: "Generate corporate invoice for Acme Corp" },
+    { id: "fin_expense", label: "Expense Approval", component: "workflows", icon: CheckSquare },
+    { id: "fin_reports", label: "Budget Reports", component: "documents", icon: ClipboardList, defaultCategory: "Reports" },
+    { id: "fin_docs", label: "Financial Documents", component: "documents", icon: FolderOpen, defaultCategory: "Invoices" },
+    { id: "fin_assistant", label: "AI Assistant", component: "workspace", icon: Sparkles },
+  ],
+  "IT Admin": [
+    { id: "adm_users", label: "User Management", component: "settings", icon: Settings },
+    { id: "adm_kb", label: "Knowledge Base Management", component: "knowledge", icon: DatabaseBackup },
+    { id: "adm_audit", label: "Audit Logs", component: "history", icon: Clock },
+    { id: "adm_usage", label: "AI Usage Monitoring", component: "history", icon: ClipboardList },
+    { id: "adm_settings", label: "System Settings", component: "settings", icon: Settings },
+  ]
+};
 
 export default function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(
     () => sessionStorage.getItem("userToken") === "mindvault-session-token-xyz"
   );
+
   const [activeNav, setActiveNav] = useState("workspace");
-  
-  // System states passed globally
   const [apiKey, setApiKey] = useState("");
   const [selectedTeam, setSelectedTeam] = useState("General");
   const [userRole, setUserRole] = useState("Software Engineer");
 
+  const currentUserRole = sessionStorage.getItem("userRole") || "Employee";
+  const allowedNavs = ROLE_NAV_CONFIGS[currentUserRole] || ROLE_NAV_CONFIGS.Employee;
+
+  // Protect and normalize routing based on active dynamic nav configuration
+  useEffect(() => {
+    if (isAuthenticated) {
+      const isValid = allowedNavs.some((item) => item.id === activeNav);
+      if (!isValid) {
+        setActiveNav(allowedNavs[0].id);
+      }
+    }
+  }, [isAuthenticated, currentUserRole, activeNav, allowedNavs]);
+
   if (!isAuthenticated) {
     return <Login onLoginSuccess={() => setIsAuthenticated(true)} />;
   }
+
+  // Active navigation config object
+  const activeItem = allowedNavs.find((item) => item.id === activeNav) || allowedNavs[0];
+
+  const handleLogout = () => {
+    sessionStorage.clear();
+    setIsAuthenticated(false);
+  };
 
   return (
     <div
@@ -48,7 +103,7 @@ export default function App() {
         boxSizing: "border-box",
       }}
     >
-      {/* 1. Left Sidebar Rail (240px) */}
+      {/* 1. Left Sidebar Rail (240px) - Rendered dynamically based on permissions */}
       <div
         style={{
           width: "240px",
@@ -67,29 +122,27 @@ export default function App() {
           overflowY: "auto",
         }}
       >
-        {/* Brand indicator */}
+        {/* Brand logo */}
         <div
           style={{
             fontFamily: typography.heading.fontFamily,
-            fontSize: "1.2rem",
+            fontSize: "1.25rem",
             fontWeight: "bold",
             color: themeColors.textPrimary,
             marginBottom: "2rem",
             padding: "0 0.75rem",
-            cursor: "pointer",
             display: "flex",
             alignItems: "center",
             gap: "0.5rem",
           }}
-          onClick={() => setActiveNav("workspace")}
         >
-          <Bot size={22} style={{ color: themeColors.accentPrimary }} />
+          <Bot size={24} style={{ color: themeColors.accentPrimary }} />
           <span>MindVault AI</span>
         </div>
 
-        {/* Sidebar Items */}
+        {/* Dynamic Sidebar navigation */}
         <div style={{ display: "flex", flexDirection: "column", gap: "0.25rem" }}>
-          {NAV_ITEMS.map((item) => {
+          {allowedNavs.map((item) => {
             const isActive = activeNav === item.id;
             const IconComponent = item.icon;
             return (
@@ -103,91 +156,157 @@ export default function App() {
                   gap: "0.75rem",
                   padding: "0.75rem 1rem",
                   borderRadius: radius.md,
-                  background: isActive ? "rgba(16, 185, 129, 0.08)" : "transparent",
+                  background: isActive ? "rgba(201, 162, 39, 0.08)" : "transparent",
                   border: "none",
                   color: isActive ? themeColors.accentPrimary : themeColors.textSecondary,
                   cursor: "pointer",
                   textAlign: "left",
                   fontFamily: typography.body.fontFamily,
-                  fontSize: "0.9rem",
+                  fontSize: "0.85rem",
                   fontWeight: isActive ? 600 : 500,
                   transition: "all 0.15s ease",
                 }}
               >
-                <IconComponent size={18} style={{ color: isActive ? themeColors.accentPrimary : themeColors.textSecondary }} />
+                <IconComponent size={16} style={{ color: isActive ? themeColors.accentPrimary : themeColors.textSecondary }} />
                 <span>{item.label}</span>
               </button>
             );
           })}
         </div>
 
-        {/* Quick status footer */}
+        {/* Ready indicator footer */}
         <div style={{ marginTop: "auto", padding: "0.75rem", borderTop: `1px solid ${themeColors.borderDivider}`, fontSize: "0.75rem", color: themeColors.textSecondary }}>
           <div style={{ display: "flex", alignItems: "center", gap: "0.4rem" }}>
             <div style={{ width: "6px", height: "6px", borderRadius: "50%", background: themeColors.accentPrimary }} />
             <span>Ready for queries</span>
           </div>
           <div style={{ marginTop: "0.25rem", fontSize: "0.7rem", opacity: 0.8 }}>
-            Role: {userRole}
+            Team: {selectedTeam}
           </div>
-          <button
-            onClick={() => {
-              sessionStorage.removeItem("userToken");
-              setIsAuthenticated(false);
-            }}
-            style={{
-              marginTop: "0.75rem",
-              background: "transparent",
-              border: "none",
-              color: themeColors.textSecondary,
-              cursor: "pointer",
-              fontSize: "0.75rem",
-              fontWeight: 600,
-              textDecoration: "underline",
-              padding: 0,
-              display: "block",
-              width: "100%",
-              textAlign: "left"
-            }}
-          >
-            🚪 Sign Out of Workspace
-          </button>
         </div>
       </div>
 
-      {/* 2. Main content area */}
+      {/* 2. Main content area containing Protected Layout Route & Top Navbar */}
       <div
         style={{
           marginLeft: "240px",
           flex: 1,
-          padding: "3rem",
-          boxSizing: "border-box",
+          display: "flex",
+          flexDirection: "column",
           minWidth: 0,
         }}
       >
-        <div style={{ position: "relative", width: "100%" }}>
+        {/* Top Navbar display */}
+        <div style={{
+          height: "70px",
+          backgroundColor: themeColors.panelSurface,
+          borderBottom: `1px solid ${themeColors.borderDivider}`,
+          padding: "0 2rem",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          position: "sticky",
+          top: 0,
+          zIndex: 999,
+        }}>
+          {/* Header title */}
+          <h3 style={{ ...typography.heading, fontSize: "1.1rem", margin: 0 }}>
+            {activeItem?.label || "Workspace"}
+          </h3>
+
+          {/* User profile detail block */}
+          <div style={{ display: "flex", alignItems: "center", gap: "1.5rem" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "0.6rem" }}>
+              <div style={{
+                width: "2.25rem",
+                height: "2.25rem",
+                borderRadius: "50%",
+                background: "rgba(201, 162, 39, 0.1)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                fontSize: "1.2rem",
+                border: `1px solid ${themeColors.borderDivider}`
+              }}>
+                {sessionStorage.getItem("userAvatar") || "👤"}
+              </div>
+              <div style={{ display: "flex", flexDirection: "column", lineHeight: 1.2 }}>
+                <span style={{ fontSize: "0.85rem", fontWeight: "600", color: themeColors.textPrimary }}>
+                  {sessionStorage.getItem("userName") || "User"}
+                </span>
+                <span style={{ fontSize: "0.72rem", color: themeColors.textSecondary }}>
+                  {sessionStorage.getItem("userDept") || "Department"}
+                </span>
+              </div>
+            </div>
+
+            {/* Department Role Badge */}
+            <span style={{
+              ...pillStyle,
+              fontSize: "0.72rem",
+              padding: "0.15rem 0.5rem",
+              color: themeColors.accentPrimary,
+              borderColor: "transparent",
+              background: "rgba(201, 162, 39, 0.08)",
+              fontWeight: "600"
+            }}>
+              {sessionStorage.getItem("userBadge") || "Role"}
+            </span>
+
+            {/* Logout button */}
+            <button
+              onClick={handleLogout}
+              style={{
+                background: "transparent",
+                border: "none",
+                color: themeColors.textSecondary,
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                gap: "0.25rem",
+                fontSize: "0.8rem",
+                fontWeight: 600,
+                transition: "color 0.2s",
+                padding: "0.4rem 0.6rem",
+                borderRadius: "8px"
+              }}
+              onMouseOver={(e) => e.currentTarget.style.color = themeColors.danger}
+              onMouseOut={(e) => e.currentTarget.style.color = themeColors.textSecondary}
+            >
+              <LogOut size={14} />
+              <span>Logout</span>
+            </button>
+          </div>
+        </div>
+
+        {/* Content viewport with Protected component routing */}
+        <div style={{ padding: "2.5rem 2rem", boxSizing: "border-box", minWidth: 0 }}>
           <ErrorBoundary>
-            {activeNav === "workspace" && (
-              <Workspace apiKey={apiKey} selectedTeam={selectedTeam} />
+            {activeItem.component === "workspace" && (
+              <Workspace 
+                apiKey={apiKey} 
+                selectedTeam={selectedTeam} 
+                defaultQuery={activeItem.defaultQuery} 
+              />
             )}
             
-            {activeNav === "knowledge" && (
+            {activeItem.component === "knowledge" && (
               <KnowledgePage apiKey={apiKey} />
             )}
             
-            {activeNav === "workflows" && (
+            {activeItem.component === "workflows" && (
               <WorkflowsPage />
             )}
             
-            {activeNav === "documents" && (
-              <DocumentsPage />
+            {activeItem.component === "documents" && (
+              <DocumentsPage defaultCategory={activeItem.defaultCategory} />
             )}
             
-            {activeNav === "history" && (
+            {activeItem.component === "history" && (
               <HistoryPage />
             )}
             
-            {activeNav === "settings" && (
+            {activeItem.component === "settings" && (
               <SettingsPage
                 apiKey={apiKey}
                 setApiKey={setApiKey}

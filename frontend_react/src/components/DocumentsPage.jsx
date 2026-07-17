@@ -5,10 +5,18 @@ import { FileText, Search, Download, Eye, FileDown } from "lucide-react";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || (import.meta.env.DEV ? "http://localhost:8000" : "");
 
-export default function DocumentsPage() {
+export default function DocumentsPage({ defaultCategory }) {
   const [searchTerm, setSearchTerm] = useState("");
   const [activeCategory, setActiveCategory] = useState("All");
   const [selectedDoc, setSelectedDoc] = useState(null);
+
+  useEffect(() => {
+    if (defaultCategory) {
+      setActiveCategory(defaultCategory);
+    } else {
+      setActiveCategory("All");
+    }
+  }, [defaultCategory]);
   
   // Custom mock list representing the corporate archive of completed document assets
   const generatedDocs = [

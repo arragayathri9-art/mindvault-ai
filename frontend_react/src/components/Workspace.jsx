@@ -3,7 +3,7 @@ import { askMindVault, logActivity } from "../api";
 import { cardStyle, inputStyle, buttonStyle, themeColors, typography, pillStyle } from "../styles";
 import { Sparkles, Play, CheckCircle2, Circle, ArrowRight, Download, FileText, Clock, TrendingUp, HelpCircle, Layers, Cpu } from "lucide-react";
 
-export default function Workspace({ apiKey, selectedTeam }) {
+export default function Workspace({ apiKey, selectedTeam, defaultQuery }) {
   const [query, setQuery] = useState("");
   const [loading, setLoading] = useState(false);
   const [currentStep, setCurrentStep] = useState(-1);
@@ -110,6 +110,13 @@ export default function Workspace({ apiKey, selectedTeam }) {
 
   const textareaRef = useRef(null);
   const timelineEndRef = useRef(null);
+
+  // Pre-fill query when defaultQuery changes
+  useEffect(() => {
+    if (defaultQuery) {
+      setQuery(defaultQuery);
+    }
+  }, [defaultQuery]);
 
   // Ctrl + K keyboard shortcut to focus prompt
   useEffect(() => {

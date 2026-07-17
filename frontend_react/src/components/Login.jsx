@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { cardStyle, inputStyle, buttonStyle, themeColors, typography } from "../styles";
-import { Bot, Key, User, ShieldAlert } from "lucide-react";
+import { Bot, Key, User, ShieldAlert, Users } from "lucide-react";
 
 export default function Login({ onLoginSuccess }) {
   const [email, setEmail] = useState("");
@@ -8,26 +8,84 @@ export default function Login({ onLoginSuccess }) {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
+  // Demo user data matching requested specifications
+  const demoUsers = [
+    {
+      role: "HR",
+      email: "hr@mindvault.ai",
+      password: "HR@123",
+      name: "Gayathri Arra",
+      department: "Human Resources",
+      badge: "HR Manager",
+      avatar: "👩‍💼"
+    },
+    {
+      role: "Employee",
+      email: "employee@mindvault.ai",
+      password: "EMP@123",
+      name: "Sarah Jenkins",
+      department: "Customer Support",
+      badge: "Support Specialist",
+      avatar: "👤"
+    },
+    {
+      role: "Manager",
+      email: "manager@mindvault.ai",
+      password: "MGR@123",
+      name: "David Miller",
+      department: "Operations",
+      badge: "Team Lead",
+      avatar: "👨‍💼"
+    },
+    {
+      role: "Finance",
+      email: "finance@mindvault.ai",
+      password: "FIN@123",
+      name: "Rajesh Patel",
+      department: "Finance & Accounts",
+      badge: "Finance Controller",
+      avatar: "💰"
+    },
+    {
+      role: "IT Admin",
+      email: "admin@mindvault.ai",
+      password: "ADMIN@123",
+      name: "System Administrator",
+      department: "IT Infrastructure",
+      badge: "IT Admin",
+      avatar: "🛠️"
+    }
+  ];
+
   const handleSubmit = (e) => {
     e.preventDefault();
     setError("");
     setLoading(true);
 
-    // Simple validation (perfect for demo/hackathon purposes)
     setTimeout(() => {
-      if (email === "admin@mindvault.ai" && password === "password123") {
+      // Find matching user credentials
+      const matchedUser = demoUsers.find(
+        (u) => u.email.toLowerCase() === email.toLowerCase() && u.password === password
+      );
+
+      if (matchedUser) {
         sessionStorage.setItem("userToken", "mindvault-session-token-xyz");
+        sessionStorage.setItem("userRole", matchedUser.role);
+        sessionStorage.setItem("userName", matchedUser.name);
+        sessionStorage.setItem("userDept", matchedUser.department);
+        sessionStorage.setItem("userBadge", matchedUser.badge);
+        sessionStorage.setItem("userAvatar", matchedUser.avatar);
         onLoginSuccess();
       } else {
-        setError("Invalid email address or password. Try the demo credentials.");
+        setError("Invalid email address or password. Try selecting a quick login role below.");
       }
       setLoading(false);
     }, 600);
   };
 
-  const handleQuickLogin = () => {
-    setEmail("admin@mindvault.ai");
-    setPassword("password123");
+  const handleQuickLogin = (u) => {
+    setEmail(u.email);
+    setPassword(u.password);
   };
 
   return (
@@ -43,10 +101,10 @@ export default function Login({ onLoginSuccess }) {
         fontFamily: typography.body.fontFamily
       }}
     >
-      <div style={{ ...cardStyle, width: "100%", maxWidth: "420px", marginTop: 0, padding: "2.5rem" }}>
+      <div style={{ ...cardStyle, width: "100%", maxWidth: "440px", marginTop: 0, padding: "2.5rem" }}>
         
         {/* Brand Icon & Heading */}
-        <div style={{ textAlign: "center", marginBottom: "2rem" }}>
+        <div style={{ textAlign: "center", marginBottom: "1.75rem" }}>
           <div
             style={{
               width: "3rem",
@@ -66,12 +124,12 @@ export default function Login({ onLoginSuccess }) {
             MindVault AI
           </h2>
           <p style={{ color: themeColors.textSecondary, fontSize: "0.85rem", marginTop: "0.4rem", margin: 0 }}>
-            Sign in to access your secure enterprise assistant
+            Enterprise AI Workplace Assistant
           </p>
         </div>
 
         {/* Login Form */}
-        <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
+        <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "1.1rem" }}>
           {error && (
             <div
               style={{
@@ -91,7 +149,7 @@ export default function Login({ onLoginSuccess }) {
             </div>
           )}
 
-          {/* Email input */}
+          {/* Email */}
           <div style={{ display: "flex", flexDirection: "column", gap: "0.4rem" }}>
             <label style={{ display: "flex", alignItems: "center", gap: "0.3rem", fontSize: "0.75rem", fontWeight: "bold", color: themeColors.textSecondary }}>
               <User size={12} />
@@ -107,7 +165,7 @@ export default function Login({ onLoginSuccess }) {
             />
           </div>
 
-          {/* Password input */}
+          {/* Password */}
           <div style={{ display: "flex", flexDirection: "column", gap: "0.4rem" }}>
             <label style={{ display: "flex", alignItems: "center", gap: "0.3rem", fontSize: "0.75rem", fontWeight: "bold", color: themeColors.textSecondary }}>
               <Key size={12} />
@@ -138,36 +196,50 @@ export default function Login({ onLoginSuccess }) {
               gap: "0.5rem"
             }}
           >
-            {loading ? "Verifying Credentials..." : "Sign In to Workspace"}
+            {loading ? "Verifying Access Control..." : "Sign In to Workspace"}
           </button>
         </form>
 
-        {/* Quick autofill helper */}
+        {/* Demo Roles Quick Selection Buttons */}
         <div
           style={{
-            marginTop: "1.75rem",
+            marginTop: "1.5rem",
             borderTop: `1px solid ${themeColors.borderDivider}`,
-            paddingTop: "1.25rem",
-            textAlign: "center"
+            paddingTop: "1.25rem"
           }}
         >
-          <button
-            type="button"
-            onClick={handleQuickLogin}
-            style={{
-              background: "transparent",
-              border: "none",
-              color: themeColors.accentPrimary,
-              fontSize: "0.78rem",
-              cursor: "pointer",
-              fontWeight: 600,
-              textDecoration: "underline"
-            }}
-          >
-            ⚡ Autofill Demo Credentials
-          </button>
-          <div style={{ fontSize: "0.7rem", color: themeColors.textSecondary, marginTop: "0.35rem" }}>
-            admin@mindvault.ai / password123
+          <div style={{ display: "flex", alignItems: "center", gap: "0.4rem", marginBottom: "0.75rem" }}>
+            <Users size={14} style={{ color: themeColors.accentPrimary }} />
+            <span style={{ fontSize: "0.75rem", fontWeight: "bold", color: themeColors.textSecondary }}>
+              SELECT DEMO PERSONA FOR AUDIT
+            </span>
+          </div>
+
+          <div style={{ display: "flex", flexDirection: "column", gap: "0.4rem" }}>
+            {demoUsers.map((u, i) => (
+              <button
+                key={i}
+                type="button"
+                onClick={() => handleQuickLogin(u)}
+                style={{
+                  background: email === u.email ? "rgba(201, 162, 39, 0.12)" : "#1E1E1E",
+                  border: `1px solid ${email === u.email ? themeColors.accentPrimary : themeColors.borderDivider}`,
+                  borderRadius: "10px",
+                  padding: "0.5rem 0.75rem",
+                  fontSize: "0.78rem",
+                  color: themeColors.textPrimary,
+                  cursor: "pointer",
+                  textAlign: "left",
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  transition: "all 0.2s ease"
+                }}
+              >
+                <span>{u.avatar} <strong>{u.role}</strong> ({u.name})</span>
+                <span style={{ color: themeColors.textSecondary, fontSize: "0.7rem" }}>{u.password}</span>
+              </button>
+            ))}
           </div>
         </div>
 
