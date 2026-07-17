@@ -8,6 +8,7 @@ import WorkflowsPage from "./components/WorkflowsPage";
 import DocumentsPage from "./components/DocumentsPage";
 import HistoryPage from "./components/HistoryPage";
 import SettingsPage from "./components/SettingsPage";
+import Login from "./components/Login";
 
 import { Sparkles, Database, Zap, FolderOpen, Clock, Settings, Bot } from "lucide-react";
 import { themeColors, typography, radius } from "./styles";
@@ -22,12 +23,19 @@ const NAV_ITEMS = [
 ];
 
 export default function App() {
+  const [isAuthenticated, setIsAuthenticated] = useState(
+    () => sessionStorage.getItem("userToken") === "mindvault-session-token-xyz"
+  );
   const [activeNav, setActiveNav] = useState("workspace");
   
   // System states passed globally
   const [apiKey, setApiKey] = useState("");
   const [selectedTeam, setSelectedTeam] = useState("General");
   const [userRole, setUserRole] = useState("Software Engineer");
+
+  if (!isAuthenticated) {
+    return <Login onLoginSuccess={() => setIsAuthenticated(true)} />;
+  }
 
   return (
     <div
@@ -122,6 +130,28 @@ export default function App() {
           <div style={{ marginTop: "0.25rem", fontSize: "0.7rem", opacity: 0.8 }}>
             Role: {userRole}
           </div>
+          <button
+            onClick={() => {
+              sessionStorage.removeItem("userToken");
+              setIsAuthenticated(false);
+            }}
+            style={{
+              marginTop: "0.75rem",
+              background: "transparent",
+              border: "none",
+              color: themeColors.textSecondary,
+              cursor: "pointer",
+              fontSize: "0.75rem",
+              fontWeight: 600,
+              textDecoration: "underline",
+              padding: 0,
+              display: "block",
+              width: "100%",
+              textAlign: "left"
+            }}
+          >
+            🚪 Sign Out of Workspace
+          </button>
         </div>
       </div>
 
