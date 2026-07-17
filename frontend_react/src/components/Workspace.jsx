@@ -1,9 +1,88 @@
 import { useState, useEffect, useRef } from "react";
 import { askMindVault, logActivity } from "../api";
 import { cardStyle, inputStyle, buttonStyle, themeColors, typography, pillStyle } from "../styles";
-import { Sparkles, Play, CheckCircle2, Circle, ArrowRight, Download, FileText, Clock, TrendingUp, HelpCircle, Layers, Cpu } from "lucide-react";
+import { Sparkles, CheckCircle2, ArrowRight, Download, FileText, Layers, Cpu } from "lucide-react";
 
-export default function Workspace({ apiKey, selectedTeam, defaultQuery }) {
+// Dynamic configurations for each enterprise department role
+const ROLE_WORKSPACE_CONFIGS = {
+  HR: {
+    greeting: "Hello, ready to manage recruitment pipelines?",
+    placeholder: "Ask about hiring compliance, onboarding workflows, or salary bands... (Ctrl + K to focus)",
+    emptyStateText: "Request offer letters or kick off employee onboarding pipelines to begin.",
+    quickActions: [
+      { label: "Generate Offer Letter", text: "Generate Offer Letter for Rahul Sharma as a Senior Software Engineer", type: "Offer Letter" },
+      { label: "Employee Onboarding", text: "Start onboarding workflow for Sarah Jenkins in support team", type: "Onboarding Checklist" },
+      { label: "HR Report", text: "Compile Q3 HR Analysis compilation report", type: "Executive Summary" },
+      { label: "Leave Approval", text: "Process leave request for Priya Patel", type: "Approval Notice" }
+    ],
+    recentTasks: [
+      { id: "hr-task-1", name: "Offer Letter - Rahul Sharma", status: "Completed", time: "10 mins ago", type: "offer" },
+      { id: "hr-task-2", name: "Onboarding SOP - Sarah Jenkins", status: "Completed", time: "1 hour ago", type: "onboard" }
+    ]
+  },
+  Employee: {
+    greeting: "Welcome back, ready to search corporate resources?",
+    placeholder: "Ask about company benefits, annual leave rollover, or policies... (Ctrl + K to focus)",
+    emptyStateText: "Ask the enterprise knowledge base or preview your generated documents.",
+    quickActions: [
+      { label: "Company Policies", text: "Show me the standard company travel and expense policy", type: "policy" },
+      { label: "Meeting Summary", text: "Summarize the Q3 engineering planning meeting minutes", type: "meeting" },
+      { label: "Apply Leave", text: "Apply for 5 days annual leave for Priya Patel", type: "leave" },
+      { label: "My Documents", text: "Show my files indexed in the corporate archive", type: "report" }
+    ],
+    recentTasks: [
+      { id: "emp-task-1", name: "Leave Request - Priya Patel", status: "Completed", time: "2 hours ago", type: "leave" },
+      { id: "emp-task-2", name: "Meeting Minutes - Q3 Planning", status: "Completed", time: "Yesterday", type: "meeting" }
+    ]
+  },
+  Manager: {
+    greeting: "Hello, ready to authorize team executions?",
+    placeholder: "Review pending leaves, run compliance rules, or generate team reports... (Ctrl + K to focus)",
+    emptyStateText: "Inspect active authorization requests and approve pipelines from this panel.",
+    quickActions: [
+      { label: "Team Reports", text: "Generate team performance metrics compilation", type: "report" },
+      { label: "Pending Approvals", text: "Check pending workflows and rules trigger logs", type: "leave" },
+      { label: "Team Workflows", text: "List current active onboarding pipelines", type: "onboard" },
+      { label: "Performance Dashboard", text: "Summarize department targets compliance status", type: "report" }
+    ],
+    recentTasks: [
+      { id: "mgr-task-1", name: "Q3 HR Analysis Compilation", status: "Completed", time: "3 hours ago", type: "report" },
+      { id: "mgr-task-2", name: "Leave Request - Priya Patel", status: "Completed", time: "1 day ago", type: "leave" }
+    ]
+  },
+  Finance: {
+    greeting: "Hello, ready to compile billing statements?",
+    placeholder: "Ask about invoice details, billable hours tracking, or budgets... (Ctrl + K to focus)",
+    emptyStateText: "Generate corporate billing invoices or review Q3 expense claims.",
+    quickActions: [
+      { label: "Generate Invoice", text: "Generate corporate invoice for Acme Corp billing", type: "invoice" },
+      { label: "Expense Approval", text: "Process Q3 travel expense claims approval", type: "leave" },
+      { label: "Budget Reports", text: "Summarize department expenditures vs budget", type: "report" },
+      { label: "Financial Documents", text: "Fetch invoice billing terms contract", type: "invoice" }
+    ],
+    recentTasks: [
+      { id: "fin-task-1", name: "Corporate Invoice - Acme Corp", status: "Completed", time: "15 mins ago", type: "invoice" },
+      { id: "fin-task-2", name: "Expense Claim - Jessica Chen", status: "Completed", time: "2 days ago", type: "leave" }
+    ]
+  },
+  "IT Admin": {
+    greeting: "Hello System Administrator, monitoring core infrastructures...",
+    placeholder: "Check query logs, verify RAG similarity metrics, or inspect audit history... (Ctrl + K to focus)",
+    emptyStateText: "Run system audits, analyze knowledge gaps, or check security logs.",
+    quickActions: [
+      { label: "User Management", text: "Display all active enterprise users and roles configuration", type: "telemetry" },
+      { label: "Audit Logs", text: "Inspect database transaction and API query logs", type: "telemetry" },
+      { label: "System Monitoring", text: "Show system telemetry and execution latency metrics", type: "telemetry" },
+      { label: "Knowledge Base", text: "Manage indexed files database and source categories", type: "telemetry" }
+    ],
+    recentTasks: [
+      { id: "it-task-1", name: "System Telemetry Log", status: "Completed", time: "5 mins ago", type: "telemetry" },
+      { id: "it-task-2", name: "Security Audit Report", status: "Completed", time: "1 hour ago", type: "telemetry" }
+    ]
+  }
+};
+
+export default function Workspace({ apiKey, selectedTeam, defaultQuery, role }) {
   const [query, setQuery] = useState("");
   const [loading, setLoading] = useState(false);
   const [currentStep, setCurrentStep] = useState(-1);
@@ -16,11 +95,15 @@ export default function Workspace({ apiKey, selectedTeam, defaultQuery }) {
   const [nextAction, setNextAction] = useState(null);
   const [downloadLink, setDownloadLink] = useState(null);
 
-  // Recent Tasks log (clickable to reload task state)
-  const [recentTasks, setRecentTasks] = useState([
-    { id: "task-1", name: "Generate Offer Letter - Rahul Sharma", status: "Completed", time: "10 mins ago", type: "offer" },
-    { id: "task-2", name: "Approve Leave Request - Priya Patel", status: "Completed", time: "1 hour ago", type: "leave" },
-  ]);
+  const currentRole = role || "Employee";
+  const config = ROLE_WORKSPACE_CONFIGS[currentRole] || ROLE_WORKSPACE_CONFIGS.Employee;
+
+  // Dynamically load recent tasks matching current active role
+  const [recentTasks, setRecentTasks] = useState(config.recentTasks);
+
+  useEffect(() => {
+    setRecentTasks(config.recentTasks);
+  }, [currentRole]);
 
   const [isReasoningExpanded, setIsReasoningExpanded] = useState(false);
 
@@ -137,13 +220,6 @@ export default function Workspace({ apiKey, selectedTeam, defaultQuery }) {
     }
   }, [currentStep]);
 
-  const quickActions = [
-    { label: "Generate Offer Letter", text: "Generate an offer letter for Rahul Sharma as a Senior Software Engineer with a CTC of 24 LPA and a joining date of August 1st." },
-    { label: "Summarize Meeting", text: "Summarize the Q3 engineering alignment meeting details." },
-    { label: "Employee Onboarding", text: "Onboard a new hire named Sarah Jenkins in the Customer Support department as a Support Specialist." },
-    { label: "Create HR Report", text: "Create an HR report summarizing recent hires and pending onboarding checklists." }
-  ];
-
   const timelineSteps = [
     "Understanding Request",
     "Searching Knowledge Base",
@@ -159,19 +235,15 @@ export default function Workspace({ apiKey, selectedTeam, defaultQuery }) {
   };
 
   const handleReopenTask = (task) => {
-    setQuery(
-      task.type === "offer"
-        ? "Generate an offer letter for Rahul Sharma as a Senior Software Engineer with a CTC of 24 LPA and a joining date of August 1st."
-        : "Approve annual leave of 5 days for Priya Patel starting July 20th."
-    );
-    // Directly run the mock output mapping immediately
-    setCurrentStep(5); // Skip timeline to completed
-    triggerOutputMapping(task.type === "offer" ? "rahul" : "leave", "Mock API Answer Context");
+    const taskText = config.quickActions.find(act => act.type === task.type)?.text || task.name;
+    setQuery(taskText);
+    setCurrentStep(5);
+    triggerOutputMapping(task.type, "Mock API Answer Context");
   };
 
   const triggerOutputMapping = (keyword, backendAnswer) => {
     const qLower = keyword.toLowerCase();
-    if (qLower.includes("rahul") || qLower.includes("offer")) {
+    if (qLower.includes("offer")) {
       setDocPreview({
         title: "Offer Letter - Rahul Sharma.txt",
         type: "Offer Letter",
@@ -185,7 +257,7 @@ export default function Workspace({ apiKey, selectedTeam, defaultQuery }) {
       });
       setNextAction("Notify Manager to authorize candidate onboarding contract.");
       setDownloadLink("rahul_offer_letter.txt");
-    } else if (qLower.includes("sarah") || qLower.includes("onboard")) {
+    } else if (qLower.includes("onboard")) {
       setDocPreview({
         title: "Onboarding SOP - Sarah Jenkins.txt",
         type: "Onboarding Checklist",
@@ -199,7 +271,7 @@ export default function Workspace({ apiKey, selectedTeam, defaultQuery }) {
       });
       setNextAction("Send welcome packet and equipment request to logistics.");
       setDownloadLink("onboarding_sop_sarah.txt");
-    } else if (qLower.includes("leave") || qLower.includes("priya")) {
+    } else if (qLower.includes("leave")) {
       setDocPreview({
         title: "Leave Approval Notification.txt",
         type: "Approval Notice",
@@ -213,7 +285,7 @@ export default function Workspace({ apiKey, selectedTeam, defaultQuery }) {
       });
       setNextAction("Update HR systems leave log balances.");
       setDownloadLink("leave_approval_priya.txt");
-    } else if (qLower.includes("hr report") || qLower.includes("report")) {
+    } else if (qLower.includes("report")) {
       setDocPreview({
         title: "HR Executive Q3 Report.txt",
         type: "Executive Summary",
@@ -227,7 +299,7 @@ export default function Workspace({ apiKey, selectedTeam, defaultQuery }) {
       });
       setNextAction("Export report metrics to leadership board.");
       setDownloadLink("hr_q3_report.txt");
-    } else if (qLower.includes("meeting") || qLower.includes("summarize")) {
+    } else if (qLower.includes("meeting")) {
       setDocPreview({
         title: "Q3 Engineering Meeting Minutes.txt",
         type: "Meeting Minutes",
@@ -241,6 +313,34 @@ export default function Workspace({ apiKey, selectedTeam, defaultQuery }) {
       });
       setNextAction("Distribute Action Items to Engineering Slack Channel.");
       setDownloadLink("meeting_minutes.txt");
+    } else if (qLower.includes("invoice")) {
+      setDocPreview({
+        title: "Corporate Invoice - Acme Corp.txt",
+        type: "Corporate Invoice",
+        content: `MINDVAULT ENTERPRISES LTD.\n-------------------------\nInvoice Ref: MV-2026-092\nClient: Acme Corporation\nDate: July 17, 2026\n\nDescription of Services:\n- Enterprise RAG Custom Integration: 40 Hours @ ₹4,500/hr\n- Expert System Orchestrator Setup: Flat Rate\n\nTotal Due: ₹3,80,000 (Three Lakhs Eighty Thousand INR)\nTerms: Net 30`
+      });
+      setWorkflowStatus({
+        name: "Corporate Invoice Issuance",
+        status: "Completed",
+        approver: "Finance Controller Rajesh Patel",
+        progress: 100
+      });
+      setNextAction("Send invoice copy to Acme accounts payable department.");
+      setDownloadLink("invoice_acme_corp.txt");
+    } else if (qLower.includes("telemetry") || qLower.includes("audit") || qLower.includes("security")) {
+      setDocPreview({
+        title: "Security & System Audit Report.txt",
+        type: "Approval Notice",
+        content: `MINDVAULT SYSTEM AUDIT LOGS\n-----------------------------\nDate: July 17, 2026\nStatus: Healthy\n\nSystem Metrics Summary:\n- Active Users: 5\n- Average API Latency: 120ms\n- Security Violations: 0\n- SQLite Activity Log integrity: VERIFIED`
+      });
+      setWorkflowStatus({
+        name: "Infrastructure Health Audit",
+        status: "Completed",
+        approver: "System Administrator",
+        progress: 100
+      });
+      setNextAction("Log telemetry metrics into History panel database.");
+      setDownloadLink("security_audit_report.txt");
     } else {
       setDocPreview({
         title: "MindVault AI Output.txt",
@@ -271,20 +371,31 @@ export default function Workspace({ apiKey, selectedTeam, defaultQuery }) {
     setDownloadLink(null);
     setCurrentStep(0);
 
+    // Dynamic type evaluation for recent tasks matching current workspace categories
+    let taskType = "custom";
+    const qLower = query.toLowerCase();
+    if (qLower.includes("offer")) taskType = "offer";
+    else if (qLower.includes("onboard")) taskType = "onboard";
+    else if (qLower.includes("leave")) taskType = "leave";
+    else if (qLower.includes("report")) taskType = "report";
+    else if (qLower.includes("meeting")) taskType = "meeting";
+    else if (qLower.includes("invoice")) taskType = "invoice";
+    else if (qLower.includes("telemetry") || qLower.includes("audit") || qLower.includes("user")) taskType = "telemetry";
+
     // Add to recent tasks
     const newTask = {
       id: `task-${Date.now()}`,
       name: query.length > 32 ? query.slice(0, 32) + "..." : query,
       status: "Running",
       time: "Just now",
-      type: query.toLowerCase().includes("rahul") ? "offer" : "custom"
+      type: taskType
     };
     setRecentTasks((prev) => [newTask, ...prev]);
 
     try {
       await logActivity({
         activity_type: "workspace_query",
-        description: `Workspace query: "${query.slice(0, 50)}..."`,
+        description: `Workspace query (${currentRole}): "${query.slice(0, 50)}..."`,
         details: query
       });
     } catch (e) {
@@ -302,10 +413,14 @@ export default function Workspace({ apiKey, selectedTeam, defaultQuery }) {
       });
     }, 600);
 
+    // Apply strict department role-enforcing system prompt at LLM query dispatch layer
+    const rolePrompt = `[System Directive: You are the enterprise AI assistant for the ${currentRole} department. You must only answer queries and perform tasks within the permissions of the ${currentRole} department. If the query belongs to another department's duties (for example, generating HR offer letters for a Finance user, or creating invoice bills for an Employee), politely refuse the request, explain that the user does not have permission for that department's actions, and guide them to switch to the correct role profile in the settings or main panel. Do not execute the request.] `;
+    const secureQuery = rolePrompt + query;
+
     try {
-      const data = await askMindVault(query, apiKey, selectedTeam);
+      const data = await askMindVault(secureQuery, apiKey, selectedTeam);
       setResult(data);
-      triggerOutputMapping(query, data.answer);
+      triggerOutputMapping(taskType, data.answer);
       
       // Update task status in list
       setRecentTasks((prev) => 
@@ -342,18 +457,18 @@ export default function Workspace({ apiKey, selectedTeam, defaultQuery }) {
           <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.25rem" }}>
             <span style={{ fontSize: "1.1rem" }}>👋</span>
             <span style={{ color: themeColors.textSecondary, fontSize: "0.85rem", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em" }}>
-              Enterprise Workplace Assistant
+              {currentRole} AI Workplace Assistant
             </span>
           </div>
           <h2 style={{ ...typography.heading, fontSize: "1.8rem", marginTop: 0, marginBottom: "1rem", letterSpacing: "-0.02em" }}>
-            What would you like to accomplish today?
+            {config.greeting}
           </h2>
           
           <form onSubmit={handleSend} style={{ width: "100%", position: "relative" }}>
             <div style={{ position: "relative", width: "100%" }}>
               <textarea
                 ref={textareaRef}
-                placeholder="Ask MindVault to generate an offer letter, compile onboarding workflows... (Ctrl + K to focus)"
+                placeholder={config.placeholder}
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 rows={3}
@@ -406,7 +521,7 @@ export default function Workspace({ apiKey, selectedTeam, defaultQuery }) {
             1. Quick Actions
           </h4>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: "0.75rem" }}>
-            {quickActions.map((action, i) => (
+            {config.quickActions.map((action, i) => (
               <div
                 key={i}
                 onClick={() => handleActionClick(action.text)}
@@ -433,7 +548,7 @@ export default function Workspace({ apiKey, selectedTeam, defaultQuery }) {
                   <span style={{ fontSize: "0.85rem", fontWeight: 600 }}>{action.label}</span>
                 </div>
                 <p style={{ color: themeColors.textSecondary, fontSize: "0.78rem", marginTop: "0.35rem", marginBottom: 0, lineHeight: 1.4 }}>
-                  Auto-fill and release automated templates.
+                  Auto-fill and release templates.
                 </p>
               </div>
             ))}
@@ -443,70 +558,115 @@ export default function Workspace({ apiKey, selectedTeam, defaultQuery }) {
         {/* 2. Active Workflow execution timeline */}
         <div>
           <h4 style={{ ...typography.heading, fontSize: "0.9rem", color: themeColors.textSecondary, marginBottom: "0.75rem", textTransform: "uppercase", letterSpacing: "0.06em" }}>
-            2. Active Workflow
+            2. Active Workflow Pipeline
           </h4>
-          <div style={{ ...cardStyle, marginTop: 0, padding: "1.25rem 1.5rem" }}>
-            {currentStep >= 0 ? (
-              <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
-                {timelineSteps.map((step, idx) => {
-                  const isFinished = idx < currentStep || currentStep === timelineSteps.length - 1;
-                  const isActive = idx === currentStep && currentStep < timelineSteps.length - 1;
-                  return (
-                    <div key={idx} style={{ display: "flex", alignItems: "center", gap: "0.75rem", opacity: idx > currentStep ? 0.35 : 1 }}>
-                      {isFinished ? (
-                        <CheckCircle2 size={16} style={{ color: themeColors.accentPrimary }} />
-                      ) : isActive ? (
-                        <div style={{ width: "16px", height: "16px", borderRadius: "50%", border: `2px solid ${themeColors.accentPrimary}`, borderTopColor: "transparent", animation: "spin 0.8s linear infinite" }} />
-                      ) : (
-                        <Circle size={16} style={{ color: "#CBD5E1" }} />
-                      )}
-                      <span style={{ fontSize: "0.85rem", fontWeight: isActive ? 600 : 400 }}>
-                        {step}
-                      </span>
-                    </div>
-                  );
-                })}
-                <div ref={timelineEndRef} />
-              </div>
-            ) : (
-              <div style={{ color: themeColors.textSecondary, fontSize: "0.85rem", fontStyle: "italic", display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                <Clock size={16} />
-                No active execution timeline running. Trigger an action above.
-              </div>
-            )}
+          <div style={{
+            ...cardStyle,
+            marginTop: 0,
+            padding: "1.25rem 1.5rem",
+            display: "flex",
+            flexDirection: "row",
+            gap: "1.5rem",
+            overflowX: "auto",
+            scrollBehavior: "smooth"
+          }}>
+            {timelineSteps.map((step, index) => {
+              const isActive = index === currentStep;
+              const isPassed = index < currentStep;
+              return (
+                <div
+                  key={index}
+                  ref={index === currentStep ? timelineEndRef : null}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "0.5rem",
+                    flexShrink: 0,
+                    opacity: isActive || isPassed ? 1 : 0.35,
+                    transition: "opacity 0.3s ease"
+                  }}
+                >
+                  <div style={{
+                    width: "22px",
+                    height: "22px",
+                    borderRadius: "50%",
+                    border: `2px solid ${isActive || isPassed ? themeColors.accentPrimary : themeColors.textSecondary}`,
+                    background: isPassed ? themeColors.accentPrimary : "transparent",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    fontSize: "0.7rem",
+                    fontWeight: "bold",
+                    color: isPassed ? "#121212" : (isActive ? themeColors.accentPrimary : themeColors.textSecondary)
+                  }}>
+                    {isPassed ? "✓" : index + 1}
+                  </div>
+                  <span style={{
+                    fontSize: "0.82rem",
+                    fontWeight: isActive ? "bold" : "normal",
+                    color: isActive ? themeColors.accentPrimary : themeColors.textPrimary
+                  }}>
+                    {step}
+                  </span>
+                  {index < timelineSteps.length - 1 && (
+                    <span style={{ color: themeColors.textSecondary, fontSize: "0.8rem", marginLeft: "0.5rem" }}>➔</span>
+                  )}
+                </div>
+              );
+            })}
           </div>
         </div>
 
-        {/* 3. Recent Tasks */}
+        {/* 3. Recent Tasks log */}
         <div>
           <h4 style={{ ...typography.heading, fontSize: "0.9rem", color: themeColors.textSecondary, marginBottom: "0.75rem", textTransform: "uppercase", letterSpacing: "0.06em" }}>
             3. Recent Tasks
           </h4>
-          <div style={{ ...cardStyle, marginTop: 0, padding: "1rem 1.5rem", display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
             {recentTasks.map((task) => (
               <div
                 key={task.id}
                 onClick={() => handleReopenTask(task)}
                 style={{
+                  ...cardStyle,
+                  marginTop: 0,
+                  padding: "0.75rem 1.25rem",
                   display: "flex",
                   justifyContent: "space-between",
                   alignItems: "center",
                   cursor: "pointer",
-                  padding: "0.4rem 0",
-                  borderBottom: `1px solid ${themeColors.borderDivider}`,
+                  transition: "all 0.15s ease"
                 }}
-                onMouseOver={(e) => { e.currentTarget.style.color = themeColors.accentPrimary; }}
-                onMouseOut={(e) => { e.currentTarget.style.color = "inherit"; }}
+                onMouseOver={(e) => {
+                  e.currentTarget.style.borderColor = themeColors.accentPrimary;
+                  e.currentTarget.style.transform = "translateX(4px)";
+                }}
+                onMouseOut={(e) => {
+                  e.currentTarget.style.borderColor = themeColors.borderDivider;
+                  e.currentTarget.style.transform = "none";
+                }}
               >
-                <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                  <FileText size={14} style={{ color: themeColors.accentPrimary }} />
+                <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
+                  <div style={{
+                    width: "8px",
+                    height: "8px",
+                    borderRadius: "50%",
+                    background: task.status === "Completed" ? themeColors.success : themeColors.accentPrimary
+                  }} />
                   <span style={{ fontSize: "0.85rem", fontWeight: 500 }}>{task.name}</span>
                 </div>
-                <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
-                  <span style={{ ...pillStyle, fontSize: "0.7rem", padding: "0.1rem 0.4rem", color: themeColors.success, background: "rgba(16,185,129,0.08)" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
+                  <span style={{ fontSize: "0.78rem", color: themeColors.textSecondary }}>{task.time}</span>
+                  <span style={{
+                    ...pillStyle,
+                    fontSize: "0.72rem",
+                    padding: "0.1rem 0.4rem",
+                    color: task.status === "Completed" ? themeColors.success : themeColors.accentPrimary,
+                    background: task.status === "Completed" ? "rgba(16, 185, 129, 0.08)" : "rgba(201, 162, 39, 0.08)",
+                    borderColor: "transparent"
+                  }}>
                     {task.status}
                   </span>
-                  <span style={{ fontSize: "0.75rem", color: themeColors.textSecondary }}>{task.time}</span>
                 </div>
               </div>
             ))}
@@ -725,7 +885,7 @@ export default function Workspace({ apiKey, selectedTeam, defaultQuery }) {
                 Output Inspector Panel
               </h4>
               <p style={{ color: "#94A3B8", fontSize: "0.78rem", marginTop: "0.5rem", lineHeight: 1.4 }}>
-                Enter your request in the prompt box or click any Quick Action card to begin.
+                {config.emptyStateText}
               </p>
             </div>
           )

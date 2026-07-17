@@ -287,6 +287,7 @@ export default function App() {
                 apiKey={apiKey} 
                 selectedTeam={selectedTeam} 
                 defaultQuery={activeItem.defaultQuery} 
+                role={currentUserRole}
               />
             )}
             
