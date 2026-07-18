@@ -306,7 +306,7 @@ export default function App() {
             )}
             
             {activeItem.component === "documents" && (
-              <DocumentsPage defaultCategory={activeItem.defaultCategory} />
+              <DocumentsPage defaultCategory={activeItem.defaultCategory} role={currentUserRole} />
             )}
             
             {activeItem.component === "history" && (

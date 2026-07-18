@@ -5,10 +5,12 @@ import { FileText, Search, Download, Eye, FileDown } from "lucide-react";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || (import.meta.env.DEV ? "http://localhost:8000" : "");
 
-export default function DocumentsPage({ defaultCategory }) {
+export default function DocumentsPage({ defaultCategory, role }) {
   const [searchTerm, setSearchTerm] = useState("");
   const [activeCategory, setActiveCategory] = useState("All");
   const [selectedDoc, setSelectedDoc] = useState(null);
+
+  const userRole = role || sessionStorage.getItem("userRole") || "Employee";
 
   useEffect(() => {
     if (defaultCategory) {
@@ -70,9 +72,15 @@ export default function DocumentsPage({ defaultCategory }) {
     }
   ];
 
-  const categories = ["All", "Offer Letters", "Reports", "Invoices", "Meeting Minutes", "Policies"];
+  const categories = ["All", "Reports", "Invoices", "Meeting Minutes", "Policies"];
+  if (userRole === "HR") {
+    categories.splice(1, 0, "Offer Letters");
+  }
 
   const filteredDocs = generatedDocs.filter((doc) => {
+    if (userRole !== "HR" && doc.category === "Offer Letters") {
+      return false;
+    }
     const matchesSearch = doc.title.toLowerCase().includes(searchTerm.toLowerCase()) || doc.content.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesCategory = activeCategory === "All" || doc.category === activeCategory;
     return matchesSearch && matchesCategory;
