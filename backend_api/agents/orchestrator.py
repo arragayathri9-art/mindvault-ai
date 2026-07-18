@@ -34,7 +34,7 @@ class Orchestrator:
         self.recommendation_agent = RecommendationAgent()
         self.support_agent = SupportAgent(support_docs_dir, support_data_dir)
 
-    def route_and_execute(self, query: str, api_key: str, team_id: str = "General") -> dict:
+    def route_and_execute(self, query: str, api_key: str, team_id: str = "General", user_role: str | None = None, comm_style: str | None = None) -> dict:
         """
         Orchestrates request, chooses appropriate agent(s), executes them and compiles the result.
         """
