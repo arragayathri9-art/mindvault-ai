@@ -3,10 +3,12 @@ import {
   submitLeaveRequest,
   getLeaveRequests,
   managerDecideLeave,
-  hrDecideLeave
+  hrDecideLeave,
+  getManagerMessages,
+  markMessageRead
 } from "../api";
 import { cardStyle, buttonStyle, inputStyle, themeColors, typography, pillStyle } from "../styles";
-import { CalendarPlus, CheckCircle2, XCircle, Clock, User, Users, ShieldCheck } from "lucide-react";
+import { CalendarPlus, CheckCircle2, XCircle, Clock, User, Users, ShieldCheck, Mail, Check } from "lucide-react";
 import EmptyState from "./EmptyState";
 
 const LEAVE_TYPES = ["Casual Leave", "Sick Leave", "Earned Leave", "Work From Home", "Unpaid Leave"];
@@ -81,6 +83,7 @@ export default function LeaveManagement({ role }) {
   const userTeamId = sessionStorage.getItem("userTeamId") || "General";
 
   const [requests, setRequests] = useState([]);
+  const [messages, setMessages] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -108,9 +111,22 @@ export default function LeaveManagement({ role }) {
     }
   }, [role, userEmail]);
 
+  const fetchMessages = useCallback(async () => {
+    if (role !== "Manager" || !userEmail) return;
+    try {
+      const data = await getManagerMessages("Manager", userEmail);
+      setMessages(data || []);
+    } catch (e) {
+      console.error("Failed to load manager messages.", e);
+    }
+  }, [role, userEmail]);
+
   useEffect(() => {
     fetchRequests();
-  }, [fetchRequests]);
+    if (role === "Manager") {
+      fetchMessages();
+    }
+  }, [fetchRequests, fetchMessages, role]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -146,6 +162,15 @@ export default function LeaveManagement({ role }) {
       fetchRequests();
     } catch (e) {
       alert(e?.response?.data?.detail || "Failed to record decision.");
+    }
+  };
+
+  const handleMarkRead = async (messageId) => {
+    try {
+      await markMessageRead(messageId, userEmail);
+      fetchMessages();
+    } catch (e) {
+      alert(e?.response?.data?.detail || "Failed to mark message as read.");
     }
   };
 
@@ -249,6 +274,8 @@ export default function LeaveManagement({ role }) {
   if (role === "Manager") {
     const pending = requests.filter((r) => r.status === "pending_manager");
     const decided = requests.filter((r) => r.status !== "pending_manager");
+    const unreadMsgs = messages.filter((m) => m.status === "unread");
+    const readMsgs = messages.filter((m) => m.status === "read");
 
     return (
       <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem", width: "100%" }}>
@@ -311,6 +338,88 @@ export default function LeaveManagement({ role }) {
             </div>
           </div>
         )}
+
+        {/* Team Messages Inbox */}
+        <div style={cardStyle}>
+          <h3 style={{ ...typography.heading, fontSize: "1.2rem", marginTop: 0, marginBottom: "0.25rem", display: "flex", alignItems: "center", gap: "0.5rem" }}>
+            <Mail size={18} style={{ color: themeColors.accentPrimary }} />
+            Team Messages Inbox
+          </h3>
+          <p style={{ color: themeColors.textSecondary, fontSize: "0.85rem", marginBottom: "1.25rem" }}>
+            Direct messages sent to you by your team members.
+          </p>
+
+          {unreadMsgs.length === 0 ? (
+            <p style={{ color: themeColors.textSecondary, fontSize: "0.85rem", fontStyle: "italic" }}>
+              No unread messages from your team.
+            </p>
+          ) : (
+            <div style={{ display: "flex", flexDirection: "column", gap: "1rem", marginBottom: "1.5rem" }}>
+              {unreadMsgs.map((m) => (
+                <div key={m.id} style={{ background: themeColors.panelSurfaceRaised, border: `1px solid ${themeColors.borderDivider}`, borderRadius: "12px", padding: "1rem" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                    <div>
+                      <strong style={{ fontSize: "0.9rem" }}>{m.employee_name}</strong>
+                      <span style={{ color: themeColors.textSecondary, fontSize: "0.8rem" }}> ({m.employee_email})</span>
+                      <div style={{ fontSize: "0.85rem", fontWeight: "600", marginTop: "0.25rem", color: themeColors.textPrimary }}>
+                        Subject: {m.subject}
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => handleMarkRead(m.id)}
+                      style={{
+                        ...buttonStyle,
+                        marginTop: 0,
+                        padding: "0.3rem 0.6rem",
+                        fontSize: "0.75rem",
+                        background: themeColors.accentPrimary,
+                        color: "#121212",
+                        border: "none",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "0.25rem"
+                      }}
+                    >
+                      <Check size={12} />
+                      Mark Read
+                    </button>
+                  </div>
+                  <div style={{
+                    fontSize: "0.82rem",
+                    marginTop: "0.75rem",
+                    color: themeColors.textSecondary,
+                    whiteSpace: "pre-wrap",
+                    background: "#1E1E1E",
+                    padding: "0.75rem",
+                    borderRadius: "8px",
+                    border: `1px solid ${themeColors.borderDivider}`
+                  }}>
+                    {m.message}
+                  </div>
+                  <div style={{ fontSize: "0.72rem", color: themeColors.textSecondary, marginTop: "0.5rem" }}>
+                    Sent on {new Date(m.created_at).toLocaleString()}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {readMsgs.length > 0 && (
+            <div style={{ borderTop: `1px solid ${themeColors.borderDivider}`, paddingTop: "1.25rem" }}>
+              <h4 style={{ ...typography.heading, fontSize: "0.95rem", marginTop: 0, marginBottom: "0.75rem" }}>Read Messages History</h4>
+              <div style={{ display: "flex", flexDirection: "column", gap: "0.6rem" }}>
+                {readMsgs.map((m) => (
+                  <div key={m.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: "0.82rem", padding: "0.6rem 0", borderBottom: `1px solid ${themeColors.borderDivider}` }}>
+                    <span>
+                      <strong>{m.employee_name}</strong>: "{m.subject}"
+                    </span>
+                    <span style={{ color: themeColors.success, fontSize: "0.75rem" }}>Read</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
       </div>
     );
   }

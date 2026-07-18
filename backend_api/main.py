@@ -179,6 +179,16 @@ class SystemApiKeyRequest(BaseModel):
     api_key: str
 
 
+class ManagerMessageCreate(BaseModel):
+    employee_email: str
+    subject: str
+    message: str
+
+
+class ManagerMessageAction(BaseModel):
+    actor_email: str
+
+
 class TeamReportCreateRequest(BaseModel):
     title: str
     content: str
@@ -1018,6 +1028,57 @@ def decide_leave_as_hr(request_id: int, request: LeaveDecisionRequest):
             raise HTTPException(status_code=404, detail="Leave request not found.")
         if result["error"] == "not_ready_for_hr":
             raise HTTPException(status_code=409, detail="This request is not awaiting HR decision yet.")
+    return result
+
+
+# 2cc. MANAGER MESSAGES ENDPOINTS: Employee sends -> Manager views & marks read.
+@app.post("/api/manager-messages")
+def send_manager_message(request: ManagerMessageCreate):
+    employee = db.get_employee_by_email(request.employee_email)
+    if not employee:
+        raise HTTPException(status_code=404, detail="Employee not found. Please contact HR to be added.")
+
+    manager_email = employee.get("manager_email")
+    if not manager_email:
+        manager = db.get_manager_for_team(employee["team_id"])
+        manager_email = manager["email"] if manager else None
+    if not manager_email:
+        raise HTTPException(status_code=400, detail=f"No manager is assigned to team '{employee['team_id']}' yet.")
+
+    msg_id = db.create_manager_message(
+        employee_email=employee["email"],
+        employee_name=employee["name"],
+        team_id=employee["team_id"],
+        manager_email=manager_email,
+        subject=request.subject,
+        message=request.message
+    )
+    db.add_notification(
+        title="New manager message",
+        content=f"{employee['name']} sent a message: '{request.subject[:30]}...'",
+        type_str="message"
+    )
+    return {"status": "success", "id": msg_id, "routed_to_manager": manager_email}
+
+
+@app.get("/api/manager-messages")
+def list_manager_messages(role: str, email: str):
+    if role == "Employee":
+        return db.get_manager_messages_for_employee(email)
+    elif role == "Manager":
+        return db.get_manager_messages_for_manager(email)
+    else:
+        raise HTTPException(status_code=400, detail="role must be Employee or Manager.")
+
+
+@app.post("/api/manager-messages/{message_id}/read")
+def mark_message_as_read(message_id: int, request: ManagerMessageAction):
+    result = db.mark_manager_message_read(message_id, request.actor_email)
+    if not result["success"]:
+        if result["error"] == "not_found":
+            raise HTTPException(status_code=404, detail="Message not found.")
+        if result["error"] == "forbidden":
+            raise HTTPException(status_code=403, detail="You can only mark your own team's messages as read.")
     return result
 
 

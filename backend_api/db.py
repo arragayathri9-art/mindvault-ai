@@ -269,6 +269,21 @@ def init_db():
         )
     """)
 
+    # 19. Manager Messages table
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS manager_messages (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            employee_email TEXT NOT NULL,
+            employee_name TEXT NOT NULL,
+            team_id TEXT NOT NULL DEFAULT 'General',
+            manager_email TEXT NOT NULL,
+            subject TEXT NOT NULL,
+            message TEXT NOT NULL,
+            status TEXT NOT NULL DEFAULT 'unread',
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
+
     # Seed demo employees - two isolated teams, each with its own manager
     cursor.execute("SELECT COUNT(*) FROM employees")
     if cursor.fetchone()[0] == 0:
@@ -961,3 +976,56 @@ def get_team_reports(role, email, team_id=None):
     rows = cursor.fetchall()
     conn.close()
     return [dict(r) for r in rows]
+
+def create_manager_message(employee_email, employee_name, team_id, manager_email, subject, message):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("""
+        INSERT INTO manager_messages (employee_email, employee_name, team_id, manager_email, subject, message, status)
+        VALUES (?, ?, ?, ?, ?, ?, 'unread')
+    """, (employee_email, employee_name, team_id, manager_email, subject, message))
+    conn.commit()
+    msg_id = cursor.lastrowid
+    conn.close()
+    return msg_id
+
+def get_manager_messages_for_employee(employee_email):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT * FROM manager_messages WHERE lower(employee_email) = lower(?) ORDER BY created_at DESC
+    """, (employee_email,))
+    rows = cursor.fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
+
+def get_manager_messages_for_manager(manager_email):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT * FROM manager_messages WHERE lower(manager_email) = lower(?) ORDER BY created_at DESC
+    """, (manager_email,))
+    rows = cursor.fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
+
+def mark_manager_message_read(message_id, manager_email):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT manager_email FROM manager_messages WHERE id = ?
+    """, (message_id,))
+    row = cursor.fetchone()
+    if not row:
+        conn.close()
+        return {"success": False, "error": "not_found"}
+    if row["manager_email"].lower() != manager_email.lower():
+        conn.close()
+        return {"success": False, "error": "forbidden"}
+    
+    cursor.execute("""
+        UPDATE manager_messages SET status = 'read' WHERE id = ?
+    """, (message_id,))
+    conn.commit()
+    conn.close()
+    return {"success": True}

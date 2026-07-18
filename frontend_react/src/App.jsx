@@ -18,10 +18,12 @@ import TeamReports from "./components/TeamReports";
 import PerformanceSection from "./components/PerformanceSection";
 import AdminDashboard from "./components/AdminDashboard";
 import AdminLock from "./components/AdminLock";
+import ContactManager from "./components/ContactManager";
 
 import { 
   Sparkles, Database, Zap, FolderOpen, Clock, Settings, Bot, LogOut,
-  FileText, CheckSquare, ClipboardList, BookOpen, DatabaseBackup, ShieldCheck
+  FileText, CheckSquare, ClipboardList, BookOpen, DatabaseBackup, ShieldCheck,
+  MessageSquare
 } from "lucide-react";
 import { themeColors, typography, radius, pillStyle } from "./styles";
 
@@ -45,6 +47,7 @@ const ROLE_NAV_CONFIGS = {
     { id: "emp_search", label: "Search Company Knowledge", component: "knowledge", icon: Database },
     { id: "emp_docs", label: "My Documents", component: "documents", icon: FolderOpen },
     { id: "emp_leave", label: "Apply Leave", component: "leave", icon: Zap },
+    { id: "emp_contact_mgr", label: "Contact Manager", component: "contact_manager", icon: MessageSquare },
     { id: "emp_team_reports", label: "Team Reports", component: "team_reports", icon: ClipboardList },
     { id: "emp_meetings", label: "Meeting Summaries", component: "documents", icon: FileText, defaultCategory: "Meeting Minutes" },
     { id: "emp_policies", label: "Company Policies", component: "knowledge", icon: BookOpen },
@@ -330,6 +333,10 @@ export default function App() {
 
             {activeItem.component === "leave" && (
               <LeaveManagement role={currentUserRole} />
+            )}
+
+            {activeItem.component === "contact_manager" && (
+              <ContactManager />
             )}
 
             {activeItem.component === "onboarding" && currentUserRole === "HR" && (

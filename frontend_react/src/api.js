@@ -327,3 +327,22 @@ export async function analyzePerformance(email, apiKey = null) {
   const response = await axios.post(`${API_BASE_URL}/api/performance/analyze`, { email, api_key: apiKey });
   return response.data;
 }
+
+export async function sendManagerMessage(payload) {
+  const response = await axios.post(`${API_BASE_URL}/api/manager-messages`, payload);
+  return response.data;
+}
+
+export async function getManagerMessages(role, email) {
+  const response = await axios.get(`${API_BASE_URL}/api/manager-messages`, {
+    params: { role, email }
+  });
+  return response.data;
+}
+
+export async function markMessageRead(id, actorEmail) {
+  const response = await axios.post(`${API_BASE_URL}/api/manager-messages/${id}/read`, {
+    actor_email: actorEmail
+  });
+  return response.data;
+}
